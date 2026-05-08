@@ -1,0 +1,37 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicehash/tauri/v2/crates/tauri-config-schema/schema.json",
+  "productName": "REST in Peace",
+  "version": "0.1.0",
+  "identifier": "com.restinpeace.app",
+  "build": {
+    "beforeDevCommand": "bun run dev",
+    "beforeBuildCommand": "bun run build",
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "REST in Peace",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 900,
+        "minHeight": 600,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; connect-src 'self' https: http:; style-src 'self' 'unsafe-inline'; font-src 'self' https://cdn.jsdelivr.net"
+    }
+  },
+  "plugins": {
+    "http": {
+      "scope": {
+        "allow": [
+          { "url": "http://**" },
+          { "url": "https://**" }
+        ]
+      }
+    }
+  }
+}

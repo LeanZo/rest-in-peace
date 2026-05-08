@@ -1,0 +1,15 @@
+.cm-variable-highlight {
+  background-color: rgba(168, 85, 247, 0.15);
+  border-radius: 3px;
+  padding: 0 2px;
+  color: #c084fc;
+  font-weight: 500;
+}
+
+.cm-editor {
+  height: 100%;
+}
+
+.cm-scroller {
+  overflow: auto;
+}

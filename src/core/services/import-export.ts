@@ -4,6 +4,57 @@ import type { Environment } from "@/core/models/environment";
 import type { ExportedCollection, ExportedItem } from "@/core/models/export";
 import type { EntityId } from "@/core/models/primitives";
 import { generateId } from "@/lib/id";
+import { isPostmanCollection, importPostmanCollection, exportToPostman } from "./postman-converter";
+import { isInsomniaExport, importInsomniaExport, exportToInsomnia } from "./insomnia-converter";
+
+export type ExportFormat = "rest-in-peace" | "postman" | "insomnia";
+
+export type ImportResult = {
+  collection: Collection;
+  folders: Map<EntityId, Folder>;
+  requests: Map<EntityId, RequestConfig>;
+  environments: Environment[];
+};
+
+export function detectFormat(data: unknown): ExportFormat | null {
+  if (typeof data !== "object" || data === null) return null;
+  const obj = data as Record<string, unknown>;
+  if (obj.format === "rest-in-peace") return "rest-in-peace";
+  if (isPostmanCollection(data)) return "postman";
+  if (isInsomniaExport(data)) return "insomnia";
+  return null;
+}
+
+export function importAny(data: unknown): ImportResult {
+  const format = detectFormat(data);
+  if (!format) throw new Error("Unsupported collection format");
+
+  switch (format) {
+    case "rest-in-peace":
+      return importCollection(data as ExportedCollection);
+    case "postman":
+      return importPostmanCollection(data as Parameters<typeof importPostmanCollection>[0]);
+    case "insomnia":
+      return importInsomniaExport(data as Parameters<typeof importInsomniaExport>[0]);
+  }
+}
+
+export function exportAs(
+  format: ExportFormat,
+  collection: Collection,
+  folders: Map<EntityId, Folder>,
+  requests: Map<EntityId, RequestConfig>,
+  environments: Environment[],
+): unknown {
+  switch (format) {
+    case "rest-in-peace":
+      return exportCollection(collection, folders, requests, environments);
+    case "postman":
+      return exportToPostman(collection, folders, requests, environments);
+    case "insomnia":
+      return exportToInsomnia(collection, folders, requests, environments);
+  }
+}
 
 export function exportCollection(
   collection: Collection,
@@ -72,12 +123,7 @@ export function exportCollection(
   };
 }
 
-export function importCollection(data: ExportedCollection): {
-  collection: Collection;
-  folders: Map<EntityId, Folder>;
-  requests: Map<EntityId, RequestConfig>;
-  environments: Environment[];
-} {
+export function importCollection(data: ExportedCollection): ImportResult {
   if (data.format !== "rest-in-peace" || data.version !== 1) {
     throw new Error("Unsupported collection format");
   }

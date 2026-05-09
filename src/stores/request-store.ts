@@ -21,6 +21,7 @@ interface RequestStoreState {
   getDraft: (tabId: string) => RequestConfig | undefined;
   getActiveTab: () => RequestTab | undefined;
   getActiveDraft: () => RequestConfig | undefined;
+  reorderTab: (fromIndex: number, toIndex: number) => void;
   syncRequestName: (requestId: EntityId, name: string) => void;
   saveTabState: () => void;
   loadTabState: (requests: Map<EntityId, RequestConfig>) => Promise<void>;
@@ -110,6 +111,16 @@ export const useRequestStore = create<RequestStoreState>((set, get) => ({
     const { drafts, activeTabId } = get();
     if (!activeTabId) return undefined;
     return drafts.get(activeTabId);
+  },
+
+  reorderTab: (fromIndex, toIndex) => {
+    set((s) => {
+      const tabs = [...s.openTabs];
+      const [moved] = tabs.splice(fromIndex, 1);
+      tabs.splice(toIndex, 0, moved);
+      return { openTabs: tabs };
+    });
+    get().saveTabState();
   },
 
   syncRequestName: (requestId, name) => {

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useUIStore } from "@/stores/ui-store";
 import { useRequestStore } from "@/stores/request-store";
 import { useCollectionStore } from "@/stores/collection-store";
@@ -6,6 +6,7 @@ import { EnvironmentSelector } from "./environment-selector";
 import { MethodBadge } from "@/primitives/badge";
 import { cn } from "@/lib/cn";
 import type { RequestConfig } from "@/core/models/request";
+import ripIcon from "@/media/images/REST in Peace - Outline - 90.png";
 
 export function TopBar() {
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
@@ -17,8 +18,11 @@ export function TopBar() {
   const drafts = useRequestStore((s) => s.drafts);
   const setActiveTab = useRequestStore((s) => s.setActiveTab);
   const closeTab = useRequestStore((s) => s.closeTab);
+  const reorderTab = useRequestStore((s) => s.reorderTab);
   const syncRequestName = useRequestStore((s) => s.syncRequestName);
   const updateRequest = useCollectionStore((s) => s.updateRequest);
+  const dragIndexRef = useRef<number | null>(null);
+  const [dropIndex, setDropIndex] = useState<number | null>(null);
 
   const activeCollectionId = useMemo(() => {
     if (!activeTabId) return null;
@@ -42,9 +46,22 @@ export function TopBar() {
 
         <div className="flex items-center gap-1.5">
           <div className="w-5 h-5 rounded bg-accent-purple/20 flex items-center justify-center">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-accent-purple">
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-            </svg>
+            <div
+              className="text-accent-purple"
+              style={{
+                width: 12,
+                height: 12,
+                WebkitMaskImage: `url(${ripIcon})`,
+                maskImage: `url(${ripIcon})`,
+                WebkitMaskSize: "contain",
+                maskSize: "contain",
+                WebkitMaskRepeat: "no-repeat",
+                maskRepeat: "no-repeat",
+                WebkitMaskPosition: "center",
+                maskPosition: "center",
+                backgroundColor: "currentColor",
+              }}
+            />
           </div>
           <span className="text-sm font-semibold text-text-primary tracking-tight">
             REST in Peace
@@ -52,15 +69,27 @@ export function TopBar() {
         </div>
       </div>
 
-      <div className="flex-1 flex items-center gap-0.5 overflow-x-auto px-1 scrollbar-none">
-        {openTabs.map((tab) => {
+      <div
+        className="flex-1 flex items-center gap-0.5 overflow-x-auto px-1 scrollbar-none"
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={() => {
+          if (dragIndexRef.current !== null && dropIndex !== null && dragIndexRef.current !== dropIndex) {
+            reorderTab(dragIndexRef.current, dropIndex);
+          }
+          dragIndexRef.current = null;
+          setDropIndex(null);
+        }}
+      >
+        {openTabs.map((tab, index) => {
           const draft = drafts.get(tab.id);
           return (
             <TabButton
               key={tab.id}
               draft={draft}
+              index={index}
               isActive={tab.id === activeTabId}
               isDirty={tab.isDirty}
+              isDropTarget={dropIndex === index}
               onClick={() => setActiveTab(tab.id)}
               onClose={() => closeTab(tab.id)}
               onRename={(name) => {
@@ -68,6 +97,9 @@ export function TopBar() {
                 updateRequest(draft.id, { name });
                 syncRequestName(draft.id, name);
               }}
+              onDragStart={() => { dragIndexRef.current = index; }}
+              onDragOver={() => setDropIndex(index)}
+              onDragEnd={() => { dragIndexRef.current = null; setDropIndex(null); }}
             />
           );
         })}
@@ -97,18 +129,28 @@ export function TopBar() {
 
 function TabButton({
   draft,
+  index,
   isActive,
   isDirty,
+  isDropTarget,
   onClick,
   onClose,
   onRename,
+  onDragStart,
+  onDragOver,
+  onDragEnd,
 }: {
   draft: RequestConfig | undefined;
+  index: number;
   isActive: boolean;
   isDirty: boolean;
+  isDropTarget: boolean;
   onClick: () => void;
   onClose: () => void;
   onRename: (name: string) => void;
+  onDragStart: () => void;
+  onDragOver: () => void;
+  onDragEnd: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState("");
@@ -131,12 +173,27 @@ function TabButton({
 
   return (
     <button
+      draggable={!editing}
       onClick={onClick}
+      onDragStart={(e) => {
+        onDragStart();
+        e.dataTransfer.effectAllowed = "move";
+        e.currentTarget.style.opacity = "0.4";
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        onDragOver();
+      }}
+      onDragEnd={(e) => {
+        e.currentTarget.style.opacity = "";
+        onDragEnd();
+      }}
       className={cn(
         "group flex items-center gap-1.5 px-3 h-8 text-xs rounded-md transition-all duration-150 shrink-0 max-w-[200px]",
         isActive
           ? "bg-surface-base text-text-primary"
           : "text-text-muted hover:text-text-secondary hover:bg-surface-hover/50",
+        isDropTarget && "ring-1 ring-accent-purple/50",
       )}
     >
       <MethodBadge method={draft.method} size="sm" />

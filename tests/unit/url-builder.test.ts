@@ -45,12 +45,12 @@ describe("buildUrl", () => {
     expect(url.searchParams.get("api_key")).toBe("secret");
   });
 
-  it("preserves existing query params in URL", () => {
+  it("uses params array as source of truth, ignoring URL query string", () => {
     const result = buildUrl("https://api.example.com?existing=true", [
       { id: "1", key: "added", value: "yes", enabled: true },
     ]);
     const url = new URL(result);
-    expect(url.searchParams.get("existing")).toBe("true");
+    expect(url.searchParams.has("existing")).toBe(false);
     expect(url.searchParams.get("added")).toBe("yes");
   });
 });

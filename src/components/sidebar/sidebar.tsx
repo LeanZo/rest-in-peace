@@ -2,8 +2,7 @@ import { useState, useRef, useMemo, type DragEvent } from "react";
 import { useCollectionStore } from "@/stores/collection-store";
 import { useEnvironmentStore } from "@/stores/environment-store";
 import { useRequestStore } from "@/stores/request-store";
-import { exportCollection, importCollection, downloadJson, readJsonFile } from "@/core/services/import-export";
-import type { ExportedCollection } from "@/core/models/export";
+import { importAny, exportAs, downloadJson, readJsonFile, type ExportFormat } from "@/core/services/import-export";
 import { MethodBadge } from "@/primitives/badge";
 import { Button } from "@/primitives/button";
 import { cn } from "@/lib/cn";
@@ -23,8 +22,8 @@ export function Sidebar() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const data = await readJsonFile<ExportedCollection>(file);
-      const result = importCollection(data);
+      const data = await readJsonFile<unknown>(file);
+      const result = importAny(data);
       importCollectionData(result.collection, result.folders, result.requests);
       if (result.environments.length > 0) {
         importEnvironments(result.environments);
@@ -148,6 +147,37 @@ function InlineEdit({
   );
 }
 
+function ExportMenu({
+  onSelect,
+  onClose,
+}: {
+  onSelect: (format: ExportFormat) => void;
+  onClose: () => void;
+}) {
+  const options: { format: ExportFormat; label: string }[] = [
+    { format: "rest-in-peace", label: "REST in Peace" },
+    { format: "postman", label: "Postman v2.1" },
+    { format: "insomnia", label: "Insomnia v4" },
+  ];
+
+  return (
+    <div
+      className="absolute right-0 top-full mt-1 z-50 bg-surface-raised border border-border-subtle rounded-md shadow-lg py-1 min-w-[140px]"
+      onMouseLeave={onClose}
+    >
+      {options.map((opt) => (
+        <button
+          key={opt.format}
+          onClick={(e) => { e.stopPropagation(); onSelect(opt.format); }}
+          className="w-full text-left px-3 py-1.5 text-xs text-text-secondary hover:bg-surface-hover hover:text-text-primary transition-colors"
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function CollectionNode({ collectionId }: { collectionId: EntityId }) {
   const collection = useCollectionStore((s) =>
     s.collections.find((c) => c.id === collectionId),
@@ -169,12 +199,13 @@ function CollectionNode({ collectionId }: { collectionId: EntityId }) {
     [allEnvironments, collectionId],
   );
   const [dropTarget, setDropTarget] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   if (!collection) return null;
 
-  const handleExport = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const data = exportCollection(collection, folders, requests, environments);
+  const handleExport = (format: ExportFormat) => {
+    setShowExportMenu(false);
+    const data = exportAs(format, collection, folders, requests, environments);
     const safeName = collection.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
     downloadJson(data, `${safeName}.json`);
   };
@@ -244,17 +275,22 @@ function CollectionNode({ collectionId }: { collectionId: EntityId }) {
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
           </button>
-          <button
-            onClick={handleExport}
-            className="text-text-muted hover:text-text-primary p-0.5 rounded hover:bg-surface-hover"
-            title="Export collection"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
-          </button>
+          <div className="relative">
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowExportMenu(!showExportMenu); }}
+              className="text-text-muted hover:text-text-primary p-0.5 rounded hover:bg-surface-hover"
+              title="Export collection"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+            </button>
+            {showExportMenu && (
+              <ExportMenu onSelect={handleExport} onClose={() => setShowExportMenu(false)} />
+            )}
+          </div>
           <button
             onClick={(e) => { e.stopPropagation(); deleteCollection(collectionId); }}
             className="text-text-muted hover:text-status-error p-0.5 rounded hover:bg-surface-hover"

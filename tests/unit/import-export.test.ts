@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { exportCollection, importCollection } from "@/core/services/import-export";
+import { exportCollection, importCollection, detectFormat, importAny } from "@/core/services/import-export";
 import type { Collection, Folder } from "@/core/models/collection";
 import type { RequestConfig } from "@/core/models/request";
 import type { Environment } from "@/core/models/environment";
@@ -237,5 +237,90 @@ describe("importCollection", () => {
     expect(() =>
       importCollection({ format: "postman", version: 1 } as unknown as ExportedCollection),
     ).toThrow("Unsupported collection format");
+  });
+});
+
+describe("detectFormat", () => {
+  it("detects rest-in-peace format", () => {
+    expect(detectFormat({ format: "rest-in-peace", version: 1 })).toBe("rest-in-peace");
+  });
+
+  it("detects postman format", () => {
+    expect(
+      detectFormat({
+        info: { name: "Test", schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
+        item: [],
+      }),
+    ).toBe("postman");
+  });
+
+  it("detects insomnia format", () => {
+    expect(
+      detectFormat({
+        _type: "export",
+        __export_format: 4,
+        resources: [],
+      }),
+    ).toBe("insomnia");
+  });
+
+  it("returns null for unknown formats", () => {
+    expect(detectFormat({})).toBeNull();
+    expect(detectFormat(null)).toBeNull();
+    expect(detectFormat("string")).toBeNull();
+    expect(detectFormat({ unknown: true })).toBeNull();
+  });
+});
+
+describe("importAny", () => {
+  it("auto-imports rest-in-peace format", () => {
+    const data: ExportedCollection = {
+      format: "rest-in-peace",
+      version: 1,
+      exportedAt: "2024-01-01T00:00:00.000Z",
+      collection: { name: "Auto RIP" },
+      environments: [],
+      items: [
+        { type: "request", name: "Test", method: "GET", url: "/test", params: [], headers: [], body: { type: "none" }, auth: { type: "none" } },
+      ],
+    };
+
+    const result = importAny(data);
+    expect(result.collection.name).toBe("Auto RIP");
+    expect(result.requests.size).toBe(1);
+  });
+
+  it("auto-imports postman format", () => {
+    const data = {
+      info: { name: "Auto Postman", schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
+      item: [
+        { name: "Test", request: { method: "GET", url: "/test" }, response: [] },
+      ],
+    };
+
+    const result = importAny(data);
+    expect(result.collection.name).toBe("Auto Postman");
+    expect(result.requests.size).toBe(1);
+  });
+
+  it("auto-imports insomnia format", () => {
+    const data = {
+      _type: "export",
+      __export_format: 4,
+      __export_date: "2024-01-01T00:00:00.000Z",
+      __export_source: "insomnia.desktop.app",
+      resources: [
+        { _id: "wrk_1", _type: "workspace", parentId: null, name: "Auto Insomnia" },
+        { _id: "req_1", _type: "request", parentId: "wrk_1", name: "Test", method: "GET", url: "/test", headers: [], parameters: [] },
+      ],
+    };
+
+    const result = importAny(data);
+    expect(result.collection.name).toBe("Auto Insomnia");
+    expect(result.requests.size).toBe(1);
+  });
+
+  it("throws on unsupported format", () => {
+    expect(() => importAny({ unknown: true })).toThrow("Unsupported collection format");
   });
 });

@@ -1,4 +1,5 @@
 import { useUIStore } from "@/stores/ui-store";
+import ripIcon from "@/media/images/REST in Peace - Outline - 90.png";
 import { Tabs, type TabItem } from "@/primitives/tabs";
 import { StatusBadge } from "@/primitives/badge";
 import { CodeEditor, type CodeLanguage } from "@/primitives/code-editor";
@@ -24,9 +25,22 @@ export function ResponsePanel({ execution }: ResponsePanelProps) {
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <div className="text-text-muted/30 mb-3">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mx-auto">
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-            </svg>
+            <div
+              className="mx-auto"
+              style={{
+                width: 128,
+                height: 128,
+                WebkitMaskImage: `url(${ripIcon})`,
+                maskImage: `url(${ripIcon})`,
+                WebkitMaskSize: "contain",
+                maskSize: "contain",
+                WebkitMaskRepeat: "no-repeat",
+                maskRepeat: "no-repeat",
+                WebkitMaskPosition: "center",
+                maskPosition: "center",
+                backgroundColor: "currentColor",
+              }}
+            />
           </div>
           <p className="text-sm text-text-muted">
             Send a request to see the response

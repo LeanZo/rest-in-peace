@@ -17,21 +17,13 @@
         "height": 800,
         "minWidth": 900,
         "minHeight": 600,
-        "resizable": true
+        "resizable": true,
+        "dragDropEnabled": false
       }
     ],
     "security": {
       "csp": "default-src 'self'; connect-src 'self' https: http:; style-src 'self' 'unsafe-inline'; font-src 'self' https://cdn.jsdelivr.net"
     }
   },
-  "plugins": {
-    "http": {
-      "scope": {
-        "allow": [
-          { "url": "http://**" },
-          { "url": "https://**" }
-        ]
-      }
-    }
-  }
+  "plugins": {}
 }

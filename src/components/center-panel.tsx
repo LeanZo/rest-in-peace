@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from "react";
+import ripIcon from "@/media/images/REST in Peace - Outline - 90.png";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { useRequestStore } from "@/stores/request-store";
 import { useExecutionStore } from "@/stores/execution-store";
@@ -10,6 +11,7 @@ import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { RequestPanel } from "./request/request-panel";
 import { ResponsePanel } from "./response/response-panel";
 import type { RequestConfig } from "@/core/models/request";
+import { extractRouteParams } from "@/core/services/url-parser";
 
 const IDLE_EXECUTION = {
   status: "idle" as const,
@@ -84,12 +86,29 @@ export function CenterPanel() {
         ? useEnvironmentStore.getState().getEnvironment(collection.activeEnvironmentId)
         : undefined;
 
+      const activeRouteParamNames = new Set(extractRouteParams(currentDraft.url));
+      const activeRouteParams: Record<string, string> = {};
+      for (const [name, value] of Object.entries(currentDraft.routeParams)) {
+        if (activeRouteParamNames.has(name)) {
+          activeRouteParams[name] = value;
+        }
+      }
+
       addHistoryEntry(
         currentDraft.id,
         currentDraft.collectionId,
         result.resolvedRequest!,
         result.response,
         env?.name ?? null,
+        {
+          method: currentDraft.method,
+          url: currentDraft.url,
+          headers: currentDraft.headers,
+          params: currentDraft.params,
+          body: currentDraft.body,
+          auth: currentDraft.auth,
+          routeParams: activeRouteParams,
+        },
       );
     }
   }, [sendRequest, cancelRequest, updateRequest, getActiveVariables, getCookies, storeCookies, addHistoryEntry]);
@@ -101,9 +120,22 @@ export function CenterPanel() {
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <div className="text-text-muted/20 mb-4">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="0.75" className="mx-auto">
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-            </svg>
+            <div
+              className="mx-auto"
+              style={{
+                width: 256,
+                height: 256,
+                WebkitMaskImage: `url(${ripIcon})`,
+                maskImage: `url(${ripIcon})`,
+                WebkitMaskSize: "contain",
+                maskSize: "contain",
+                WebkitMaskRepeat: "no-repeat",
+                maskRepeat: "no-repeat",
+                WebkitMaskPosition: "center",
+                maskPosition: "center",
+                backgroundColor: "currentColor",
+              }}
+            />
           </div>
           <h2 className="text-lg font-semibold text-text-secondary mb-1">
             REST in Peace

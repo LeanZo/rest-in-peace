@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { HistoryEntry } from "@/core/models/history";
+import type { HistoryEntry, OriginalRequest } from "@/core/models/history";
 import type { EntityId, HttpMethod } from "@/core/models/primitives";
 import type { ResponseData } from "@/core/models/response";
 import type { ResolvedRequest } from "@/core/models/request";
@@ -19,6 +19,7 @@ interface HistoryState {
     resolvedRequest: ResolvedRequest,
     response: ResponseData,
     environmentName: string | null,
+    originalRequest?: OriginalRequest,
   ) => HistoryEntry;
   deleteEntry: (id: EntityId) => void;
   clearRequestHistory: (requestId: EntityId) => void;
@@ -47,7 +48,7 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
     await storage.set("history", get().entries);
   },
 
-  addEntry: (requestId, collectionId, resolvedRequest, response, environmentName) => {
+  addEntry: (requestId, collectionId, resolvedRequest, response, environmentName, originalRequest) => {
     const now = new Date().toISOString();
     const entry: HistoryEntry = {
       id: generateId(),
@@ -63,6 +64,7 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
         })),
         body: typeof resolvedRequest.body === "string" ? resolvedRequest.body : null,
       },
+      originalRequest,
       response,
       environmentName,
       createdAt: now,

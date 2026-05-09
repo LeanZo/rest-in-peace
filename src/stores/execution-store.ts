@@ -139,3 +139,10 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
     return get().executions.get(tabId) ?? IDLE_EXECUTION;
   },
 }));
+
+window.addEventListener("beforeunload", () => {
+  const { abortControllers } = useExecutionStore.getState();
+  for (const controller of abortControllers.values()) {
+    controller.abort();
+  }
+});

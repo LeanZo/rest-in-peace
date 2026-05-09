@@ -1,9 +1,10 @@
-import { useCallback, useMemo } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import type { HttpMethod } from "@/core/models/primitives";
 import type { RequestConfig } from "@/core/models/request";
 import { useEnvironmentStore } from "@/stores/environment-store";
 import { useCollectionStore } from "@/stores/collection-store";
 import { isCurl, parseCurl } from "@/core/services/curl-parser";
+import { buildCurl } from "@/core/services/curl-builder";
 import { UrlInput } from "./url-input";
 import { cn } from "@/lib/cn";
 import { HTTP_METHODS, METHOD_COLORS } from "@/lib/constants";
@@ -105,11 +106,56 @@ export function UrlBar({ draft, isLoading, onUpdate, onSend }: UrlBarProps) {
         placeholder="Enter URL or paste cURL..."
       />
 
+      <SendSplitButton
+        draft={draft}
+        isLoading={isLoading}
+        onSend={onSend}
+      />
+    </div>
+  );
+}
+
+function SendSplitButton({
+  draft,
+  isLoading,
+  onSend,
+}: {
+  draft: RequestConfig;
+  isLoading: boolean;
+  onSend: () => void;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [menuOpen]);
+
+  const handleCopyCurl = () => {
+    const curl = buildCurl(draft);
+    navigator.clipboard.writeText(curl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    setMenuOpen(false);
+  };
+
+  const disabled = isLoading || !draft.url.trim();
+
+  return (
+    <div className="relative flex" ref={menuRef}>
       <button
         onClick={onSend}
-        disabled={isLoading || !draft.url.trim()}
+        disabled={disabled}
         className={cn(
-          "flex items-center gap-2 px-5 py-2 rounded-lg font-semibold text-sm transition-all duration-200",
+          "flex items-center gap-2 px-5 py-2 rounded-l-lg font-semibold text-sm transition-all duration-200",
           "bg-accent-green text-white",
           "hover:bg-accent-green-light hover:shadow-[0_0_24px_var(--color-accent-green-glow)]",
           "active:bg-accent-green-dim",
@@ -133,6 +179,36 @@ export function UrlBar({ draft, isLoading, onUpdate, onSend }: UrlBarProps) {
           </>
         )}
       </button>
+      <button
+        onClick={() => setMenuOpen(!menuOpen)}
+        disabled={disabled}
+        className={cn(
+          "flex items-center px-1.5 py-2 rounded-r-lg border-l border-white/20 font-semibold text-sm transition-all duration-200",
+          "bg-accent-green text-white",
+          "hover:bg-accent-green-light",
+          "active:bg-accent-green-dim",
+          "disabled:opacity-40 disabled:cursor-not-allowed",
+        )}
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+
+      {menuOpen && (
+        <div className="absolute right-0 top-full mt-1 w-44 bg-surface-overlay border border-border-default rounded-lg shadow-lg z-50 py-1 animate-[fadeIn_100ms_ease-out]">
+          <button
+            onClick={handleCopyCurl}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M10 2H18a2 2 0 012 2v12a2 2 0 01-2 2h-8a2 2 0 01-2-2V4a2 2 0 012-2z" />
+              <path d="M4 8h2v12h12v2H6a2 2 0 01-2-2V8z" />
+            </svg>
+            {copied ? "Copied!" : "Copy as cURL"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -8,6 +8,8 @@ export function buildUrl(
   const url = parseUrl(baseUrl);
   if (!url) return baseUrl;
 
+  url.search = "";
+
   for (const param of params) {
     if (param.enabled && param.key) {
       url.searchParams.append(param.key, param.value);

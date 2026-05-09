@@ -6,7 +6,7 @@ REST API development and testing tool.
 
 - TypeScript 6.0, React 19.2, Vite 8, Tailwind CSS 4.2
 - Zustand 5 for state, CodeMirror 6 for editors
-- Tauri 2.11 for desktop packaging (Rust not yet installed)
+- Tauri 2.11 for desktop packaging
 - Bun 1.3 as package manager
 
 ## Commands
@@ -15,6 +15,8 @@ REST API development and testing tool.
 - `bun run build` — Type check + production build
 - `bun run test` — Run unit tests with Vitest
 - `bun run test:watch` — Watch mode tests
+- `bun run tauri dev` — Desktop app with hot reload (requires Rust)
+- `bun run tauri build` — Production desktop installer
 
 ## Project Structure
 
@@ -26,7 +28,17 @@ REST API development and testing tool.
 - `src/components/` — Feature components
 - `src/layouts/` — Layout shells
 - `src/lib/` — Small utilities
+- `src-tauri/` — Tauri/Rust backend (main.rs, tauri.conf.json, capabilities)
 - `tests/` — Unit tests
+
+## Desktop App (Tauri)
+
+- `src-tauri/tauri.conf.json` — App config, window size (1280x800, min 900x600), CSP, plugin permissions
+- `src-tauri/capabilities/default.json` — Security permissions for HTTP and Store plugins
+- `src-tauri/src/main.rs` — Registers tauri-plugin-http and tauri-plugin-store
+- Platform detection: `isTauri()` in `src/core/adapters/platform.ts` checks `window.__TAURI_INTERNALS__`
+- HTTP: Desktop uses `@tauri-apps/plugin-http` (bypasses CORS, full header access); web uses browser `fetch`
+- Storage: Desktop uses `@tauri-apps/plugin-store` (JSON file `rest-in-peace-data.json`); web uses `localStorage` (prefix `rip:`)
 
 ## Conventions
 

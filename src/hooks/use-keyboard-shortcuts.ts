@@ -21,6 +21,7 @@ export function useKeyboardShortcuts({ onSend }: ShortcutHandlers = {}) {
 
       if (mod && e.key === "Enter") {
         e.preventDefault();
+        if (e.repeat) return;
         onSend?.();
         return;
       }

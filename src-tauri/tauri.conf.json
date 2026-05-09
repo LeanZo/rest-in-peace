@@ -1,6 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicehash/tauri/v2/crates/tauri-config-schema/schema.json",
   "productName": "REST in Peace",
+  "mainBinaryName": "REST in Peace",
   "version": "0.1.0",
   "identifier": "com.restinpeace.app",
   "build": {

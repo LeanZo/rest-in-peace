@@ -35,7 +35,7 @@ export function UrlBar({ draft, isLoading, onUpdate, onSend }: UrlBarProps) {
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !e.repeat) {
         onSend();
       }
     },

@@ -1,9 +1,9 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicehash/tauri/v2/crates/tauri-config-schema/schema.json",
-  "productName": "RestInPeace",
-  "mainBinaryName": "RestInPeace",
+  "productName": "REST in Peace",
+  "mainBinaryName": "REST in Peace",
   "version": "0.1.0",
-  "identifier": "com.restinpeace.app",
+  "identifier": "br.dev.karma.restinpeace",
   "build": {
     "beforeDevCommand": "bun run dev",
     "beforeBuildCommand": "bun run build",
@@ -27,6 +27,7 @@
     }
   },
   "bundle": {
+    "active": true,
     "targets": "all",
     "icon": [
       "icons/32x32.png",

@@ -5,6 +5,7 @@ interface UIState {
   sidebarWidth: number;
   historyPanelOpen: boolean;
   envManagerOpen: boolean;
+  settingsOpen: boolean;
   activeRequestTab: string;
   activeResponseTab: string;
 
@@ -12,6 +13,7 @@ interface UIState {
   setSidebarWidth: (width: number) => void;
   toggleHistoryPanel: () => void;
   setEnvManagerOpen: (open: boolean) => void;
+  setSettingsOpen: (open: boolean) => void;
   setActiveRequestTab: (tab: string) => void;
   setActiveResponseTab: (tab: string) => void;
 }
@@ -21,6 +23,7 @@ export const useUIStore = create<UIState>((set) => ({
   sidebarWidth: 260,
   historyPanelOpen: false,
   envManagerOpen: false,
+  settingsOpen: false,
   activeRequestTab: "params",
   activeResponseTab: "body",
 
@@ -33,6 +36,7 @@ export const useUIStore = create<UIState>((set) => ({
     set((s) => ({ historyPanelOpen: !s.historyPanelOpen })),
 
   setEnvManagerOpen: (open) => set({ envManagerOpen: open }),
+  setSettingsOpen: (open) => set({ settingsOpen: open }),
 
   setActiveRequestTab: (tab) => set({ activeRequestTab: tab }),
   setActiveResponseTab: (tab) => set({ activeResponseTab: tab }),

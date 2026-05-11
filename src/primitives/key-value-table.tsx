@@ -73,7 +73,7 @@ export function KeyValueTable({
                 className="accent-accent-purple h-3.5 w-3.5"
               />
             </div>
-            <div className="border-b border-border-subtle">
+            <div className="flex items-center px-1.5 py-1 border-b border-border-subtle">
               <input
                 value={entry.key}
                 onChange={(e) => updateEntry(i, { key: e.target.value })}
@@ -81,13 +81,13 @@ export function KeyValueTable({
                 placeholder={keyPlaceholder}
                 readOnly={readOnly}
                 className={cn(
-                  "w-full bg-transparent text-text-primary px-2 py-1.5 outline-none",
+                  "w-full bg-surface-input rounded px-1.5 py-0.5 text-text-primary outline-none",
                   "placeholder:text-text-muted/50",
                   !entry.enabled && "opacity-40",
                 )}
               />
             </div>
-            <div className="border-b border-border-subtle">
+            <div className="flex items-center px-1.5 py-1 border-b border-border-subtle">
               <input
                 value={entry.value}
                 onChange={(e) => updateEntry(i, { value: e.target.value })}
@@ -95,7 +95,7 @@ export function KeyValueTable({
                 placeholder={valuePlaceholder}
                 readOnly={readOnly}
                 className={cn(
-                  "w-full bg-transparent text-text-primary px-2 py-1.5 outline-none",
+                  "w-full bg-surface-input rounded px-1.5 py-0.5 text-text-primary outline-none",
                   "placeholder:text-text-muted/50",
                   !entry.enabled && "opacity-40",
                 )}

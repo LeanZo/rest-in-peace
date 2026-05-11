@@ -1,13 +1,12 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
-import type { HttpMethod } from "@/core/models/primitives";
 import type { RequestConfig } from "@/core/models/request";
 import { useEnvironmentStore } from "@/stores/environment-store";
 import { useCollectionStore } from "@/stores/collection-store";
 import { isCurl, parseCurl } from "@/core/services/curl-parser";
 import { buildCurl } from "@/core/services/curl-builder";
 import { UrlInput } from "./url-input";
+import { MethodSelect } from "./method-select";
 import { cn } from "@/lib/cn";
-import { HTTP_METHODS, METHOD_COLORS } from "@/lib/constants";
 
 interface UrlBarProps {
   draft: RequestConfig;
@@ -64,38 +63,10 @@ export function UrlBar({ draft, isLoading, onUpdate, onSend }: UrlBarProps) {
 
   return (
     <div className="flex items-center gap-2 p-3">
-      <div className="relative">
-        <select
-          value={draft.method}
-          onChange={(e) =>
-            onUpdate({ method: e.target.value as HttpMethod })
-          }
-          className={cn(
-            "appearance-none bg-surface-overlay border border-border-default rounded-lg",
-            "px-3 py-2 pr-7 text-xs font-mono font-bold",
-            "outline-none cursor-pointer transition-colors",
-            "focus:border-accent-purple",
-            METHOD_COLORS[draft.method],
-          )}
-        >
-          {HTTP_METHODS.map((m) => (
-            <option key={m} value={m}>
-              {m}
-            </option>
-          ))}
-        </select>
-        <svg
-          width="10"
-          height="10"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </div>
+      <MethodSelect
+        value={draft.method}
+        onChange={(method) => onUpdate({ method })}
+      />
 
       <UrlInput
         value={draft.url}

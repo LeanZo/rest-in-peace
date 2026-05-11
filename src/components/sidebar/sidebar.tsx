@@ -1,10 +1,13 @@
-import { useState, useRef, useMemo, type DragEvent } from "react";
+import { useState, useRef, useMemo, useEffect, type DragEvent } from "react";
 import { useCollectionStore } from "@/stores/collection-store";
 import { useEnvironmentStore } from "@/stores/environment-store";
 import { useRequestStore } from "@/stores/request-store";
 import { importAny, exportAs, downloadJson, readJsonFile, type ExportFormat } from "@/core/services/import-export";
+import { buildCurl } from "@/core/services/curl-builder";
 import { MethodBadge } from "@/primitives/badge";
 import { Button } from "@/primitives/button";
+import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/primitives/context-menu";
+import { ConfirmDialog } from "@/primitives/confirm-dialog";
 import { cn } from "@/lib/cn";
 import type { EntityId } from "@/core/models/primitives";
 import type { RequestConfig } from "@/core/models/request";
@@ -98,13 +101,24 @@ function InlineEdit({
   value,
   onCommit,
   className,
+  forceEdit,
+  onEditEnd,
 }: {
   value: string;
   onCommit: (name: string) => void;
   className?: string;
+  forceEdit?: boolean;
+  onEditEnd?: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
+
+  useEffect(() => {
+    if (forceEdit) {
+      setEditValue(value);
+      setEditing(true);
+    }
+  }, [forceEdit, value]);
 
   const start = () => {
     setEditValue(value);
@@ -115,6 +129,12 @@ function InlineEdit({
     const trimmed = editValue.trim();
     if (trimmed && trimmed !== value) onCommit(trimmed);
     setEditing(false);
+    onEditEnd?.();
+  };
+
+  const cancel = () => {
+    setEditing(false);
+    onEditEnd?.();
   };
 
   if (editing) {
@@ -126,7 +146,7 @@ function InlineEdit({
         onBlur={commit}
         onKeyDown={(e) => {
           if (e.key === "Enter") commit();
-          if (e.key === "Escape") setEditing(false);
+          if (e.key === "Escape") cancel();
         }}
         onClick={(e) => e.stopPropagation()}
         className={cn("bg-transparent outline-none border-b border-accent-purple w-full", className)}
@@ -200,8 +220,20 @@ function CollectionNode({ collectionId }: { collectionId: EntityId }) {
   );
   const [dropTarget, setDropTarget] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [forceEdit, setForceEdit] = useState(false);
+  const menu = useContextMenu();
 
   if (!collection) return null;
+
+  const menuItems: ContextMenuItem[] = [
+    { label: "New Request", onClick: () => { const r = addReq(collectionId); openReq(r.id, r); } },
+    { label: "New Folder", onClick: () => addFolder(collectionId, "New Folder") },
+    { separator: true },
+    { label: "Rename", onClick: () => setForceEdit(true) },
+    { separator: true },
+    { label: "Delete", danger: true, onClick: () => setConfirmDelete(true) },
+  ];
 
   const handleExport = (format: ExportFormat) => {
     setShowExportMenu(false);
@@ -227,6 +259,7 @@ function CollectionNode({ collectionId }: { collectionId: EntityId }) {
           dropTarget && "bg-accent-purple/10 ring-1 ring-accent-purple/30",
         )}
         onClick={() => toggleCollection(collectionId)}
+        onContextMenu={menu.onContextMenu}
         onDragOver={(e) => { e.preventDefault(); setDropTarget(true); }}
         onDragLeave={() => setDropTarget(false)}
         onDrop={handleDrop}
@@ -252,6 +285,8 @@ function CollectionNode({ collectionId }: { collectionId: EntityId }) {
           value={collection.name}
           onCommit={(name) => updateCollection(collectionId, { name })}
           className="text-xs text-text-primary flex-1"
+          forceEdit={forceEdit}
+          onEditEnd={() => setForceEdit(false)}
         />
         <div className="hidden group-hover:flex items-center gap-0.5">
           <button
@@ -292,8 +327,8 @@ function CollectionNode({ collectionId }: { collectionId: EntityId }) {
             )}
           </div>
           <button
-            onClick={(e) => { e.stopPropagation(); deleteCollection(collectionId); }}
-            className="text-text-muted hover:text-status-error p-0.5 rounded hover:bg-surface-hover"
+            onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
+            className="text-text-muted hover:text-danger p-0.5 rounded hover:bg-surface-hover"
             title="Delete collection"
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -303,6 +338,17 @@ function CollectionNode({ collectionId }: { collectionId: EntityId }) {
           </button>
         </div>
       </div>
+
+      {menu.pos && <ContextMenu x={menu.pos.x} y={menu.pos.y} items={menuItems} onClose={menu.close} />}
+      <ConfirmDialog
+        isOpen={confirmDelete}
+        title="Delete Collection"
+        message={`Delete "${collection.name}" and all its contents? This cannot be undone.`}
+        confirmLabel="Delete"
+        danger
+        onConfirm={() => { deleteCollection(collectionId); setConfirmDelete(false); }}
+        onCancel={() => setConfirmDelete(false)}
+      />
 
       {isExpanded && (
         <div className="ml-3">
@@ -382,10 +428,22 @@ function FolderNode({
   const deleteFolder = useCollectionStore((s) => s.deleteFolder);
   const moveItem = useCollectionStore((s) => s.moveItem);
   const [dropPosition, setDropPosition] = useState<"before" | "inside" | "after" | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [forceEdit, setForceEdit] = useState(false);
+  const menu = useContextMenu();
 
   if (!folder) return null;
 
   const isExpanded = expandedIds.has(folderId);
+
+  const menuItems: ContextMenuItem[] = [
+    { label: "New Request", onClick: () => { const r = addReq(collectionId, folderId); openReq(r.id, r); } },
+    { label: "New Subfolder", onClick: () => addFolder(collectionId, "New Folder", folderId) },
+    { separator: true },
+    { label: "Rename", onClick: () => setForceEdit(true) },
+    { separator: true },
+    { label: "Delete", danger: true, onClick: () => setConfirmDelete(true) },
+  ];
 
   const handleDragStart = (e: DragEvent) => {
     e.dataTransfer.setData("text/plain", folderId);
@@ -442,6 +500,7 @@ function FolderNode({
         )}
         style={{ paddingLeft: `${depth * 8 + 8}px` }}
         onClick={() => toggleFolder(folderId)}
+        onContextMenu={menu.onContextMenu}
       >
         <svg
           width="10"
@@ -464,6 +523,8 @@ function FolderNode({
           value={folder.name}
           onCommit={(name) => renameFolder(folderId, name)}
           className="text-xs text-text-secondary flex-1"
+          forceEdit={forceEdit}
+          onEditEnd={() => setForceEdit(false)}
         />
         <div className="hidden group-hover:flex items-center gap-0.5">
           <button
@@ -488,8 +549,8 @@ function FolderNode({
             </svg>
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); deleteFolder(folderId); }}
-            className="text-text-muted hover:text-status-error p-0.5 rounded hover:bg-surface-hover"
+            onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
+            className="text-text-muted hover:text-danger p-0.5 rounded hover:bg-surface-hover"
             title="Delete folder"
           >
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -502,6 +563,17 @@ function FolderNode({
       {dropPosition === "after" && (
         <div className="h-0.5 mx-2 bg-accent-purple rounded" />
       )}
+
+      {menu.pos && <ContextMenu x={menu.pos.x} y={menu.pos.y} items={menuItems} onClose={menu.close} />}
+      <ConfirmDialog
+        isOpen={confirmDelete}
+        title="Delete Folder"
+        message={`Delete "${folder.name}" and all its contents? This cannot be undone.`}
+        confirmLabel="Delete"
+        danger
+        onConfirm={() => { deleteFolder(folderId); setConfirmDelete(false); }}
+        onCancel={() => setConfirmDelete(false)}
+      />
 
       {isExpanded && (
         <ItemList
@@ -531,6 +603,7 @@ function RequestNode({
   const openRequest = useRequestStore((s) => s.openRequest);
   const updateRequest = useCollectionStore((s) => s.updateRequest);
   const deleteRequest = useCollectionStore((s) => s.deleteRequest);
+  const duplicateRequest = useCollectionStore((s) => s.duplicateRequest);
   const syncRequestName = useRequestStore((s) => s.syncRequestName);
   const moveItem = useCollectionStore((s) => s.moveItem);
   const activeTabId = useRequestStore((s) => s.activeTabId);
@@ -539,6 +612,27 @@ function RequestNode({
     (t) => t.requestId === request.id && t.id === activeTabId,
   );
   const [dropPosition, setDropPosition] = useState<"before" | "after" | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [forceEdit, setForceEdit] = useState(false);
+  const menu = useContextMenu();
+
+  const menuItems: ContextMenuItem[] = [
+    {
+      label: "Duplicate",
+      onClick: () => {
+        const r = duplicateRequest(request.id);
+        if (r) openRequest(r.id, r);
+      },
+    },
+    {
+      label: "Copy as cURL",
+      onClick: () => navigator.clipboard.writeText(buildCurl(request)),
+    },
+    { separator: true },
+    { label: "Rename", onClick: () => setForceEdit(true) },
+    { separator: true },
+    { label: "Delete", danger: true, onClick: () => setConfirmDelete(true) },
+  ];
 
   const handleDragStart = (e: DragEvent<HTMLDivElement>) => {
     e.dataTransfer.setData("text/plain", request.id);
@@ -586,6 +680,7 @@ function RequestNode({
         )}
         style={{ paddingLeft: `${depth * 8 + 16}px` }}
         onClick={() => openRequest(request.id, request)}
+        onContextMenu={menu.onContextMenu}
       >
         <MethodBadge method={request.method} size="sm" />
         <InlineEdit
@@ -595,10 +690,12 @@ function RequestNode({
             syncRequestName(request.id, name);
           }}
           className="text-xs flex-1"
+          forceEdit={forceEdit}
+          onEditEnd={() => setForceEdit(false)}
         />
         <button
-          onClick={(e) => { e.stopPropagation(); deleteRequest(request.id); }}
-          className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-status-error p-0.5 rounded transition-opacity"
+          onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
+          className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-danger p-0.5 rounded transition-opacity"
           title="Delete request"
         >
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -610,6 +707,17 @@ function RequestNode({
       {dropPosition === "after" && (
         <div className="h-0.5 mx-2 bg-accent-purple rounded" />
       )}
+
+      {menu.pos && <ContextMenu x={menu.pos.x} y={menu.pos.y} items={menuItems} onClose={menu.close} />}
+      <ConfirmDialog
+        isOpen={confirmDelete}
+        title="Delete Request"
+        message={`Delete "${request.name}"? This cannot be undone.`}
+        confirmLabel="Delete"
+        danger
+        onConfirm={() => { deleteRequest(request.id); setConfirmDelete(false); }}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </div>
   );
 }

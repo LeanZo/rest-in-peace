@@ -26,5 +26,15 @@
       "csp": "default-src 'self'; connect-src 'self' https: http:; style-src 'self' 'unsafe-inline'; font-src 'self' https://cdn.jsdelivr.net"
     }
   },
-  "plugins": {}
+  "bundle": {
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE4RUYxOEU0NUEwNzE4MwpSV1NEY2FCRmp2R09BU1ArWm1za25ReVZtV1ZveGhDc1V2bDVMK0U4dzVkR3RDc0VTYXh4cU0veQo=",
+      "endpoints": [
+        "https://github.com/LeanZo/rest-in-peace/releases/latest/download/latest.json"
+      ]
+    }
+  }
 }

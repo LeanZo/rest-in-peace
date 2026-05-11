@@ -16,6 +16,9 @@ interface RequestStoreState {
 
   openRequest: (requestId: EntityId, request: RequestConfig) => void;
   closeTab: (tabId: string) => void;
+  closeOtherTabs: (tabId: string) => void;
+  closeAllTabs: () => void;
+  closeTabsForRequests: (requestIds: EntityId[]) => void;
   setActiveTab: (tabId: string) => void;
   updateDraft: (tabId: string, patch: Partial<RequestConfig>) => void;
   getDraft: (tabId: string) => RequestConfig | undefined;
@@ -75,6 +78,44 @@ export const useRequestStore = create<RequestStoreState>((set, get) => ({
         activeTabId: newActiveTabId,
         drafts: newDrafts,
       };
+    });
+    get().saveTabState();
+  },
+
+  closeOtherTabs: (tabId) => {
+    set((s) => {
+      const kept = s.openTabs.filter((t) => t.id === tabId);
+      const newDrafts = new Map<string, RequestConfig>();
+      for (const tab of kept) {
+        const draft = s.drafts.get(tab.id);
+        if (draft) newDrafts.set(tab.id, draft);
+      }
+      return { openTabs: kept, activeTabId: tabId, drafts: newDrafts };
+    });
+    get().saveTabState();
+  },
+
+  closeAllTabs: () => {
+    set({ openTabs: [], activeTabId: null, drafts: new Map() });
+    get().saveTabState();
+  },
+
+  closeTabsForRequests: (requestIds) => {
+    const idSet = new Set(requestIds);
+    set((s) => {
+      const closing = s.openTabs.filter((t) => idSet.has(t.requestId));
+      if (closing.length === 0) return s;
+
+      const newTabs = s.openTabs.filter((t) => !idSet.has(t.requestId));
+      const newDrafts = new Map(s.drafts);
+      for (const tab of closing) newDrafts.delete(tab.id);
+
+      let newActiveTabId = s.activeTabId;
+      if (s.activeTabId && closing.some((t) => t.id === s.activeTabId)) {
+        newActiveTabId = newTabs[0]?.id ?? null;
+      }
+
+      return { openTabs: newTabs, activeTabId: newActiveTabId, drafts: newDrafts };
     });
     get().saveTabState();
   },

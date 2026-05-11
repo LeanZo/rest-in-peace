@@ -100,7 +100,7 @@ function VariableRow({
           value={variable.name}
           onChange={(e) => onUpdate({ name: e.target.value })}
           placeholder="VARIABLE_NAME"
-          className="w-full bg-transparent text-text-primary outline-none placeholder:text-text-muted/50 font-mono"
+          className="w-full bg-surface-input rounded px-1.5 py-0.5 text-text-primary outline-none placeholder:text-text-muted/50 font-mono"
         />
       </td>
       <td className="px-3 py-1">
@@ -108,7 +108,7 @@ function VariableRow({
           value={variable.initialValue}
           onChange={(e) => onUpdate({ initialValue: e.target.value })}
           placeholder="initial value"
-          className="w-full bg-transparent text-text-primary outline-none placeholder:text-text-muted/50"
+          className="w-full bg-surface-input rounded px-1.5 py-0.5 text-text-primary outline-none placeholder:text-text-muted/50"
         />
       </td>
       <td className="px-3 py-1">
@@ -117,7 +117,7 @@ function VariableRow({
           value={variable.currentValue}
           onChange={(e) => onUpdate({ currentValue: e.target.value })}
           placeholder="current value"
-          className="w-full bg-transparent text-text-primary outline-none placeholder:text-text-muted/50"
+          className="w-full bg-surface-input rounded px-1.5 py-0.5 text-text-primary outline-none placeholder:text-text-muted/50"
         />
       </td>
       <td className="px-3 py-1 text-center">

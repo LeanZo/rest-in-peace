@@ -11,7 +11,7 @@ export function AppLayout({ topBar, children, statusBar }: AppLayoutProps) {
     <div className="flex flex-col h-screen bg-surface-base">
       {topBar}
       <main className="flex-1 overflow-hidden">{children}</main>
-      {statusBar}
+      {/* {statusBar} */}
     </div>
   );
 }

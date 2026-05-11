@@ -5,6 +5,7 @@ import type { EntityId } from "@/core/models/primitives";
 import type { Environment } from "@/core/models/environment";
 import { generateId } from "@/lib/id";
 import { getStorage } from "@/core/adapters/storage";
+import { useRequestStore } from "@/stores/request-store";
 
 interface CollectionState {
   collections: Collection[];
@@ -131,10 +132,21 @@ export const useCollectionStore = create<CollectionState>((set, get) => ({
   },
 
   deleteCollection: (id) => {
-    set((s) => {
-      const collection = s.collections.find((c) => c.id === id);
-      if (!collection) return s;
+    const { collections, folders: allFolders } = get();
+    const collection = collections.find((c) => c.id === id);
+    if (!collection) return;
 
+    const deletedRequestIds: EntityId[] = [];
+    const collectIds = (itemIds: EntityId[]) => {
+      for (const itemId of itemIds) {
+        const folder = allFolders.get(itemId);
+        if (folder) collectIds(folder.childItemIds);
+        else deletedRequestIds.push(itemId);
+      }
+    };
+    collectIds(collection.rootItemIds);
+
+    set((s) => {
       const newFolders = new Map(s.folders);
       const newRequests = new Map(s.requests);
 
@@ -158,6 +170,10 @@ export const useCollectionStore = create<CollectionState>((set, get) => ({
       };
     });
     get().saveToStorage();
+
+    if (deletedRequestIds.length > 0) {
+      useRequestStore.getState().closeTabsForRequests(deletedRequestIds);
+    }
   },
 
   updateCollection: (id, patch) => {
@@ -212,10 +228,21 @@ export const useCollectionStore = create<CollectionState>((set, get) => ({
   },
 
   deleteFolder: (id) => {
-    set((s) => {
-      const folder = s.folders.get(id);
-      if (!folder) return s;
+    const { folders: allFolders } = get();
+    const folder = allFolders.get(id);
+    if (!folder) return;
 
+    const deletedRequestIds: EntityId[] = [];
+    const collectIds = (itemIds: EntityId[]) => {
+      for (const itemId of itemIds) {
+        const f = allFolders.get(itemId);
+        if (f) collectIds(f.childItemIds);
+        else deletedRequestIds.push(itemId);
+      }
+    };
+    collectIds(folder.childItemIds);
+
+    set((s) => {
       const newFolders = new Map(s.folders);
       const newRequests = new Map(s.requests);
 
@@ -256,6 +283,10 @@ export const useCollectionStore = create<CollectionState>((set, get) => ({
       return { folders: newFolders, requests: newRequests, collections };
     });
     get().saveToStorage();
+
+    if (deletedRequestIds.length > 0) {
+      useRequestStore.getState().closeTabsForRequests(deletedRequestIds);
+    }
   },
 
   renameFolder: (id, name) => {
@@ -348,6 +379,7 @@ export const useCollectionStore = create<CollectionState>((set, get) => ({
       return { requests: newRequests, folders: newFolders, collections };
     });
     get().saveToStorage();
+    useRequestStore.getState().closeTabsForRequests([id]);
   },
 
   updateRequest: (id, patch) => {

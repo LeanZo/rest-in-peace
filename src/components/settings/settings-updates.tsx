@@ -11,6 +11,8 @@ export function SettingsUpdates() {
   const updateAvailable = useSettingsStore((s) => s.updateAvailable);
   const updateReady = useSettingsStore((s) => s.updateReady);
   const updateVersion = useSettingsStore((s) => s.updateVersion);
+  const updateError = useSettingsStore((s) => s.updateError);
+  const upToDate = useSettingsStore((s) => s.upToDate);
 
   const handleCheckForUpdates = async () => {
     const found = await checkForUpdates();
@@ -62,12 +64,25 @@ export function SettingsUpdates() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-text-primary">Check for updates</p>
-                <p className="text-xs text-text-muted mt-0.5">
+                <p
+                  className="text-xs mt-0.5"
+                  style={{
+                    color: updateError
+                      ? "var(--color-danger)"
+                      : upToDate
+                        ? "var(--color-accent-green)"
+                        : "var(--color-text-muted)",
+                  }}
+                >
                   {updateReady
                     ? `Version ${updateVersion} is ready to install`
                     : updateAvailable
                       ? `Version ${updateVersion} is downloading...`
-                      : "Check if a new version is available"}
+                      : updateError
+                        ? "Failed to check for updates. Please try again."
+                        : upToDate
+                          ? "You're on the latest version"
+                          : "Check if a new version is available"}
                 </p>
               </div>
 

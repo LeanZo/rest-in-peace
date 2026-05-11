@@ -11,6 +11,8 @@ interface SettingsState {
   updateNotes: string | null;
   checkingForUpdates: boolean;
   downloadingUpdate: boolean;
+  updateError: boolean;
+  upToDate: boolean;
 
   setKeepHistory: (value: boolean) => void;
   setAutoUpdate: (value: boolean) => void;
@@ -21,6 +23,8 @@ interface SettingsState {
     updateNotes?: string | null;
     checkingForUpdates?: boolean;
     downloadingUpdate?: boolean;
+    updateError?: boolean;
+    upToDate?: boolean;
   }) => void;
   loadFromStorage: () => Promise<void>;
   saveToStorage: () => Promise<void>;
@@ -41,6 +45,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   updateNotes: null,
   checkingForUpdates: false,
   downloadingUpdate: false,
+  updateError: false,
+  upToDate: false,
 
   setKeepHistory: (value) => {
     set({ keepHistory: value });

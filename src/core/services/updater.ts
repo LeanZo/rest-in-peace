@@ -9,7 +9,7 @@ export async function checkForUpdates(): Promise<boolean> {
   if (!isTauri()) return false;
 
   const store = useSettingsStore.getState();
-  store.setUpdateStatus({ checkingForUpdates: true });
+  store.setUpdateStatus({ checkingForUpdates: true, updateError: false, upToDate: false });
 
   try {
     const { check } = await import("@tauri-apps/plugin-updater");
@@ -26,10 +26,10 @@ export async function checkForUpdates(): Promise<boolean> {
       return true;
     }
 
-    store.setUpdateStatus({ checkingForUpdates: false });
+    store.setUpdateStatus({ checkingForUpdates: false, upToDate: true });
     return false;
   } catch {
-    store.setUpdateStatus({ checkingForUpdates: false });
+    store.setUpdateStatus({ checkingForUpdates: false, updateError: true });
     return false;
   }
 }

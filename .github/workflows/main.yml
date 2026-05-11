@@ -43,4 +43,4 @@ jobs:
           releaseBody: "See the assets to download and install this version."
           releaseDraft: true
           updaterJsonPreferNsis: true
-          releaseAssetNamePattern: '[name][ext]'
+          args: ${{ matrix.args }}

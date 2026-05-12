@@ -8,6 +8,7 @@ export interface ExportedCollection {
   collection: {
     name: string;
     description?: string;
+    docs?: string;
     auth?: AuthConfig;
     headers?: KeyValueEntry[];
   };
@@ -27,11 +28,13 @@ export type ExportedItem =
   | {
       type: "folder";
       name: string;
+      docs?: string;
       children: ExportedItem[];
     }
   | {
       type: "request";
       name: string;
+      docs?: string;
       method: HttpMethod;
       url: string;
       params: Array<{

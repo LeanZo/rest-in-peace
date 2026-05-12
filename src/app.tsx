@@ -53,10 +53,20 @@ export function App() {
   const setEnvManagerOpen = useUIStore((s) => s.setEnvManagerOpen);
   const settingsOpen = useUIStore((s) => s.settingsOpen);
   const setSettingsOpen = useUIStore((s) => s.setSettingsOpen);
-  const activeCollectionId = useRequestStore((s) => {
-    if (!s.activeTabId) return null;
-    return s.drafts.get(s.activeTabId)?.collectionId ?? null;
-  });
+  const activeTab = useRequestStore((s) =>
+    s.openTabs.find((t) => t.id === s.activeTabId),
+  );
+  const draftCollectionId = useRequestStore((s) =>
+    s.activeTabId ? s.drafts.get(s.activeTabId)?.collectionId ?? null : null,
+  );
+  const folderCollectionId = useCollectionStore((s) =>
+    activeTab?.type === "folder" ? s.folders.get(activeTab.entityId)?.collectionId ?? null : null,
+  );
+  const activeCollectionId = activeTab?.type === "collection"
+    ? activeTab.entityId
+    : activeTab?.type === "folder"
+      ? folderCollectionId
+      : draftCollectionId;
 
   return (
     <AppLayout

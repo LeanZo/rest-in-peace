@@ -84,6 +84,7 @@ export interface RequestConfig extends BaseEntity {
   collectionId: EntityId;
   parentFolderId: EntityId | null;
   name: string;
+  docs?: string;
   method: HttpMethod;
   url: string;
   params: KeyValueEntry[];

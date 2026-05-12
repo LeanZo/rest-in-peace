@@ -5,10 +5,11 @@ import { json } from "@codemirror/lang-json";
 import { xml } from "@codemirror/lang-xml";
 import { html } from "@codemirror/lang-html";
 import { javascript } from "@codemirror/lang-javascript";
+import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { getBaseExtensions } from "@/lib/codemirror/extensions";
 import { variablePlugin } from "@/lib/codemirror/variable-decoration";
 
-export type CodeLanguage = "json" | "xml" | "html" | "javascript" | "text";
+export type CodeLanguage = "json" | "xml" | "html" | "javascript" | "markdown" | "text";
 
 interface CodeEditorProps {
   value: string;
@@ -27,6 +28,7 @@ function getLanguageExtension(language: CodeLanguage): Extension[] {
     case "xml": return [xml()];
     case "html": return [html()];
     case "javascript": return [javascript()];
+    case "markdown": return [markdown({ base: markdownLanguage })];
     case "text": return [];
   }
 }

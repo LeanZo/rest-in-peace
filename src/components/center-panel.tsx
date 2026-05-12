@@ -10,6 +10,7 @@ import { useHistoryStore } from "@/stores/history-store";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { RequestPanel } from "./request/request-panel";
 import { ResponsePanel } from "./response/response-panel";
+import { DocsPanel } from "./docs/docs-panel";
 import type { RequestConfig } from "@/core/models/request";
 import { extractRouteParams } from "@/core/services/url-parser";
 
@@ -38,13 +39,13 @@ export function CenterPanel() {
   const storeCookies = useCookieStore((s) => s.storeCookiesFromResponse);
   const addHistoryEntry = useHistoryStore((s) => s.addEntry);
 
-  const draft = useMemo(
-    () => (activeTabId ? drafts.get(activeTabId) : undefined),
-    [drafts, activeTabId],
-  );
   const activeTab = useMemo(
     () => openTabs.find((t) => t.id === activeTabId),
     [openTabs, activeTabId],
+  );
+  const draft = useMemo(
+    () => (activeTabId ? drafts.get(activeTabId) : undefined),
+    [drafts, activeTabId],
   );
   const execution = useMemo(
     () => (activeTabId ? (executions.get(activeTabId) ?? IDLE_EXECUTION) : IDLE_EXECUTION),
@@ -53,8 +54,11 @@ export function CenterPanel() {
 
   const handleSend = useCallback(async () => {
     const tabId = useRequestStore.getState().activeTabId;
-    const currentDraft = tabId ? useRequestStore.getState().drafts.get(tabId) : null;
-    if (!tabId || !currentDraft) return;
+    const currentTab = useRequestStore.getState().openTabs.find((t) => t.id === tabId);
+    if (!tabId || !currentTab || currentTab.type !== "request") return;
+
+    const currentDraft = useRequestStore.getState().drafts.get(tabId);
+    if (!currentDraft) return;
 
     const exec = useExecutionStore.getState().executions.get(tabId);
     if (exec?.status === "sending") {
@@ -115,7 +119,7 @@ export function CenterPanel() {
 
   useKeyboardShortcuts({ onSend: handleSend });
 
-  if (!draft || !activeTab || !activeTabId) {
+  if (!activeTab || !activeTabId) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
@@ -147,6 +151,12 @@ export function CenterPanel() {
       </div>
     );
   }
+
+  if (activeTab.type === "collection" || activeTab.type === "folder") {
+    return <DocsPanel key={activeTab.id} tabId={activeTab.id} type={activeTab.type} entityId={activeTab.entityId} />;
+  }
+
+  if (!draft) return null;
 
   const handleUpdate = (patch: Partial<RequestConfig>) => {
     updateDraft(activeTabId, patch);

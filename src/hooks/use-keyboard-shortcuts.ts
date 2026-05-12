@@ -28,13 +28,20 @@ export function useKeyboardShortcuts({ onSend }: ShortcutHandlers = {}) {
 
       if (mod && e.key === "s") {
         e.preventDefault();
-        const { activeTabId, drafts, openTabs } = useRequestStore.getState();
+        const { activeTabId, drafts, openTabs, saveDocsDraft } = useRequestStore.getState();
         if (!activeTabId) return;
+        const tab = openTabs.find((t) => t.id === activeTabId);
+        if (!tab) return;
+
+        if (tab.type === "collection" || tab.type === "folder") {
+          saveDocsDraft(activeTabId);
+          return;
+        }
+
         const draft = drafts.get(activeTabId);
         if (!draft) return;
         updateRequest(draft.id, draft);
-        const tab = openTabs.find((t) => t.id === activeTabId);
-        if (tab?.isDirty) {
+        if (tab.isDirty) {
           useRequestStore.setState((s) => ({
             openTabs: s.openTabs.map((t) =>
               t.id === activeTabId ? { ...t, isDirty: false } : t,

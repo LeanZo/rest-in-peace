@@ -30,7 +30,7 @@ export function HistoryPanel() {
 
   const filteredEntries = useMemo(() => {
     if (!activeTab) return [];
-    let result = entries.filter((e) => e.requestId === activeTab.requestId);
+    let result = entries.filter((e) => e.requestId === activeTab.entityId);
     if (search) {
       const lower = search.toLowerCase();
       result = result.filter(
@@ -61,7 +61,7 @@ export function HistoryPanel() {
         </span>
         {activeTab && filteredEntries.length > 0 && (
           <button
-            onClick={() => clearHistory(activeTab.requestId)}
+            onClick={() => clearHistory(activeTab.entityId)}
             className="text-[10px] text-text-muted hover:text-danger transition-colors"
           >
             Clear

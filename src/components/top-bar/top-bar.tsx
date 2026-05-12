@@ -1,6 +1,6 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect, useCallback, forwardRef } from "react";
 import { useUIStore } from "@/stores/ui-store";
-import { useRequestStore } from "@/stores/request-store";
+import { useRequestStore, type Tab } from "@/stores/request-store";
 import { useCollectionStore } from "@/stores/collection-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { buildCurl } from "@/core/services/curl-builder";
@@ -30,17 +30,45 @@ export function TopBar() {
   const reorderTab = useRequestStore((s) => s.reorderTab);
   const syncRequestName = useRequestStore((s) => s.syncRequestName);
   const updateRequest = useCollectionStore((s) => s.updateRequest);
+  const updateCollection = useCollectionStore((s) => s.updateCollection);
+  const renameFolder = useCollectionStore((s) => s.renameFolder);
   const duplicateRequest = useCollectionStore((s) => s.duplicateRequest);
   const openRequest = useRequestStore((s) => s.openRequest);
+  const collections = useCollectionStore((s) => s.collections);
+  const folders = useCollectionStore((s) => s.folders);
   const dragIndexRef = useRef<number | null>(null);
+  const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const [dropIndex, setDropIndex] = useState<number | null>(null);
-  const [pendingCloseTabId, setPendingCloseTabId] = useState<string | null>(null);
+  const [pendingCloseAction, setPendingCloseAction] = useState<
+    | { type: "single"; tabId: string }
+    | { type: "others"; keepTabId: string }
+    | { type: "all" }
+    | null
+  >(null);
+
+  useEffect(() => {
+    if (!activeTabId) return;
+    const el = tabRefs.current.get(activeTabId);
+    el?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+  }, [activeTabId]);
+
+  const setTabRef = useCallback((tabId: string, el: HTMLButtonElement | null) => {
+    if (el) tabRefs.current.set(tabId, el);
+    else tabRefs.current.delete(tabId);
+  }, []);
 
   const activeCollectionId = useMemo(() => {
     if (!activeTabId) return null;
+    const activeTab = openTabs.find((t) => t.id === activeTabId);
+    if (!activeTab) return null;
+    if (activeTab.type === "collection") return activeTab.entityId;
+    if (activeTab.type === "folder") {
+      const folder = folders.get(activeTab.entityId);
+      return folder?.collectionId ?? null;
+    }
     const draft = drafts.get(activeTabId);
     return draft?.collectionId ?? null;
-  }, [drafts, activeTabId]);
+  }, [drafts, activeTabId, openTabs, folders]);
 
   return (
     <div className="h-12 flex items-center bg-surface-raised border-b border-border-subtle shrink-0">
@@ -92,46 +120,66 @@ export function TopBar() {
           setDropIndex(null);
         }}
       >
-        {openTabs.map((tab, index) => {
-          const draft = drafts.get(tab.id);
-          return (
-            <TabButton
-              key={tab.id}
-              tabId={tab.id}
-              draft={draft}
-              index={index}
-              isActive={tab.id === activeTabId}
-              isDirty={tab.isDirty}
-              isDropTarget={dropIndex === index}
-              onClick={() => setActiveTab(tab.id)}
-              onClose={() => {
-                if (tab.isDirty) {
-                  setPendingCloseTabId(tab.id);
-                } else {
-                  closeTab(tab.id);
-                }
-              }}
-              onCloseOthers={() => closeOtherTabs(tab.id)}
-              onCloseAll={closeAllTabs}
-              onDuplicate={() => {
-                if (!draft) return;
-                const r = duplicateRequest(draft.id);
-                if (r) openRequest(r.id, r);
-              }}
-              onCopyCurl={() => {
-                if (draft) navigator.clipboard.writeText(buildCurl(draft));
-              }}
-              onRename={(name) => {
+        {openTabs.map((tab, index) => (
+          <TabButton
+            key={tab.id}
+            ref={(el) => setTabRef(tab.id, el)}
+            tab={tab}
+            draft={tab.type === "request" ? drafts.get(tab.id) : undefined}
+            index={index}
+            isActive={tab.id === activeTabId}
+            isDropTarget={dropIndex === index}
+            onClick={() => setActiveTab(tab.id)}
+            onClose={() => {
+              if (tab.isDirty) {
+                setPendingCloseAction({ type: "single", tabId: tab.id });
+              } else {
+                closeTab(tab.id);
+              }
+            }}
+            onCloseOthers={() => {
+              if (openTabs.some((t) => t.id !== tab.id && t.isDirty)) {
+                setPendingCloseAction({ type: "others", keepTabId: tab.id });
+              } else {
+                closeOtherTabs(tab.id);
+              }
+            }}
+            onCloseAll={() => {
+              if (openTabs.some((t) => t.isDirty)) {
+                setPendingCloseAction({ type: "all" });
+              } else {
+                closeAllTabs();
+              }
+            }}
+            onDuplicate={() => {
+              if (tab.type !== "request") return;
+              const draft = drafts.get(tab.id);
+              if (!draft) return;
+              const r = duplicateRequest(draft.id);
+              if (r) openRequest(r.id, r);
+            }}
+            onCopyCurl={() => {
+              if (tab.type !== "request") return;
+              const draft = drafts.get(tab.id);
+              if (draft) navigator.clipboard.writeText(buildCurl(draft));
+            }}
+            onRename={(name) => {
+              if (tab.type === "request") {
+                const draft = drafts.get(tab.id);
                 if (!draft) return;
                 updateRequest(draft.id, { name });
                 syncRequestName(draft.id, name);
-              }}
-              onDragStart={() => { dragIndexRef.current = index; }}
-              onDragOver={() => setDropIndex(index)}
-              onDragEnd={() => { dragIndexRef.current = null; setDropIndex(null); }}
-            />
-          );
-        })}
+              } else if (tab.type === "collection") {
+                updateCollection(tab.entityId, { name });
+              } else if (tab.type === "folder") {
+                renameFolder(tab.entityId, name);
+              }
+            }}
+            onDragStart={() => { dragIndexRef.current = index; }}
+            onDragOver={() => setDropIndex(index)}
+            onDragEnd={() => { dragIndexRef.current = null; setDropIndex(null); }}
+          />
+        ))}
       </div>
 
       <div className="flex items-center gap-2 px-3">
@@ -177,44 +225,42 @@ export function TopBar() {
       </div>
 
       <ConfirmDialog
-        isOpen={pendingCloseTabId !== null}
+        isOpen={pendingCloseAction !== null}
         title="Unsaved Changes"
-        message="This request has unsaved changes that will be lost."
+        message={
+          pendingCloseAction?.type === "single"
+            ? "This tab has unsaved changes that will be lost."
+            : "Some tabs have unsaved changes that will be lost."
+        }
         confirmLabel="Discard"
         danger
         onConfirm={() => {
-          if (pendingCloseTabId) closeTab(pendingCloseTabId);
-          setPendingCloseTabId(null);
+          if (pendingCloseAction) {
+            if (pendingCloseAction.type === "single") closeTab(pendingCloseAction.tabId);
+            else if (pendingCloseAction.type === "others") closeOtherTabs(pendingCloseAction.keepTabId);
+            else closeAllTabs();
+          }
+          setPendingCloseAction(null);
         }}
-        onCancel={() => setPendingCloseTabId(null)}
+        onCancel={() => setPendingCloseAction(null)}
       />
     </div>
   );
 }
 
-function TabButton({
-  tabId,
-  draft,
-  index,
-  isActive,
-  isDirty,
-  isDropTarget,
-  onClick,
-  onClose,
-  onCloseOthers,
-  onCloseAll,
-  onDuplicate,
-  onCopyCurl,
-  onRename,
-  onDragStart,
-  onDragOver,
-  onDragEnd,
-}: {
-  tabId: string;
+function TabIcon({ type }: { type: "collection" | "folder" }) {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={type === "collection" ? "text-accent-purple" : "text-text-muted"}>
+      <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+    </svg>
+  );
+}
+
+interface TabButtonProps {
+  tab: Tab;
   draft: RequestConfig | undefined;
   index: number;
   isActive: boolean;
-  isDirty: boolean;
   isDropTarget: boolean;
   onClick: () => void;
   onClose: () => void;
@@ -226,22 +272,48 @@ function TabButton({
   onDragStart: () => void;
   onDragOver: () => void;
   onDragEnd: () => void;
-}) {
+}
+
+const TabButton = forwardRef<HTMLButtonElement, TabButtonProps>(function TabButton({
+  tab,
+  draft,
+  index,
+  isActive,
+  isDropTarget,
+  onClick,
+  onClose,
+  onCloseOthers,
+  onCloseAll,
+  onDuplicate,
+  onCopyCurl,
+  onRename,
+  onDragStart,
+  onDragOver,
+  onDragEnd,
+}, ref) {
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState("");
   const menu = useContextMenu();
+  const collections = useCollectionStore((s) => s.collections);
+  const folders = useCollectionStore((s) => s.folders);
 
-  if (!draft) return null;
+  const tabName = useMemo(() => {
+    if (tab.type === "request") return draft?.name || "Untitled";
+    if (tab.type === "collection") {
+      return collections.find((c) => c.id === tab.entityId)?.name || "Untitled";
+    }
+    return folders.get(tab.entityId)?.name || "Untitled";
+  }, [tab, draft, collections, folders]);
 
   const startEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setEditValue(draft.name);
+    setEditValue(tabName);
     setEditing(true);
   };
 
   const commitEdit = () => {
     const trimmed = editValue.trim();
-    if (trimmed && trimmed !== draft.name) {
+    if (trimmed && trimmed !== tabName) {
       onRename(trimmed);
     }
     setEditing(false);
@@ -251,14 +323,19 @@ function TabButton({
     { label: "Close", onClick: onClose },
     { label: "Close Others", onClick: onCloseOthers },
     { label: "Close All", onClick: onCloseAll },
-    { separator: true },
-    { label: "Duplicate", onClick: onDuplicate },
-    { label: "Copy as cURL", onClick: onCopyCurl },
+    ...(tab.type === "request"
+      ? [
+          { separator: true } as const,
+          { label: "Duplicate", onClick: onDuplicate },
+          { label: "Copy as cURL", onClick: onCopyCurl },
+        ]
+      : []),
   ];
 
   return (
     <>
       <button
+        ref={ref}
         draggable={!editing}
         onClick={onClick}
         onContextMenu={menu.onContextMenu}
@@ -283,7 +360,11 @@ function TabButton({
           isDropTarget && "ring-1 ring-accent-purple/50",
         )}
       >
-        <MethodBadge method={draft.method} size="sm" />
+        {tab.type === "request" && draft ? (
+          <MethodBadge method={draft.method} size="sm" />
+        ) : (
+          <TabIcon type={tab.type as "collection" | "folder"} />
+        )}
         {editing ? (
           <input
             autoFocus
@@ -299,10 +380,10 @@ function TabButton({
           />
         ) : (
           <span className="truncate" onDoubleClick={startEdit}>
-            {draft.name || "Untitled"}
+            {tabName}
           </span>
         )}
-        {isDirty && (
+        {tab.isDirty && (
           <span className="w-1.5 h-1.5 rounded-full bg-accent-purple shrink-0" />
         )}
         <span
@@ -321,4 +402,4 @@ function TabButton({
       {menu.pos && <ContextMenu x={menu.pos.x} y={menu.pos.y} items={menuItems} onClose={menu.close} />}
     </>
   );
-}
+});

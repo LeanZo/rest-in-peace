@@ -22,6 +22,8 @@ interface CollectionState {
   addCollection: (name: string) => Collection;
   deleteCollection: (id: EntityId) => void;
   updateCollection: (id: EntityId, patch: Partial<Pick<Collection, "name" | "description">>) => void;
+  updateCollectionDocs: (id: EntityId, docs: string) => void;
+  updateFolderDocs: (id: EntityId, docs: string) => void;
 
   addFolder: (collectionId: EntityId, name: string, parentFolderId?: EntityId) => Folder;
   deleteFolder: (id: EntityId) => void;
@@ -36,6 +38,8 @@ interface CollectionState {
   toggleCollection: (id: EntityId) => void;
 
   setActiveEnvironment: (collectionId: EntityId, envId: EntityId | null) => void;
+
+  reorderCollection: (collectionId: EntityId, targetIndex: number) => void;
 
   moveItem: (
     itemId: EntityId,
@@ -136,12 +140,12 @@ export const useCollectionStore = create<CollectionState>((set, get) => ({
     const collection = collections.find((c) => c.id === id);
     if (!collection) return;
 
-    const deletedRequestIds: EntityId[] = [];
+    const deletedEntityIds: EntityId[] = [id];
     const collectIds = (itemIds: EntityId[]) => {
       for (const itemId of itemIds) {
+        deletedEntityIds.push(itemId);
         const folder = allFolders.get(itemId);
         if (folder) collectIds(folder.childItemIds);
-        else deletedRequestIds.push(itemId);
       }
     };
     collectIds(collection.rootItemIds);
@@ -170,10 +174,7 @@ export const useCollectionStore = create<CollectionState>((set, get) => ({
       };
     });
     get().saveToStorage();
-
-    if (deletedRequestIds.length > 0) {
-      useRequestStore.getState().closeTabsForRequests(deletedRequestIds);
-    }
+    useRequestStore.getState().closeTabsForEntities(deletedEntityIds);
   },
 
   updateCollection: (id, patch) => {
@@ -182,6 +183,26 @@ export const useCollectionStore = create<CollectionState>((set, get) => ({
         c.id === id ? { ...c, ...patch, updatedAt: new Date().toISOString() } : c,
       ),
     }));
+    get().saveToStorage();
+  },
+
+  updateCollectionDocs: (id, docs) => {
+    set((s) => ({
+      collections: s.collections.map((c) =>
+        c.id === id ? { ...c, docs, updatedAt: new Date().toISOString() } : c,
+      ),
+    }));
+    get().saveToStorage();
+  },
+
+  updateFolderDocs: (id, docs) => {
+    set((s) => {
+      const folder = s.folders.get(id);
+      if (!folder) return s;
+      const newFolders = new Map(s.folders);
+      newFolders.set(id, { ...folder, docs, updatedAt: new Date().toISOString() });
+      return { folders: newFolders };
+    });
     get().saveToStorage();
   },
 
@@ -232,12 +253,12 @@ export const useCollectionStore = create<CollectionState>((set, get) => ({
     const folder = allFolders.get(id);
     if (!folder) return;
 
-    const deletedRequestIds: EntityId[] = [];
+    const deletedEntityIds: EntityId[] = [id];
     const collectIds = (itemIds: EntityId[]) => {
       for (const itemId of itemIds) {
+        deletedEntityIds.push(itemId);
         const f = allFolders.get(itemId);
         if (f) collectIds(f.childItemIds);
-        else deletedRequestIds.push(itemId);
       }
     };
     collectIds(folder.childItemIds);
@@ -283,10 +304,7 @@ export const useCollectionStore = create<CollectionState>((set, get) => ({
       return { folders: newFolders, requests: newRequests, collections };
     });
     get().saveToStorage();
-
-    if (deletedRequestIds.length > 0) {
-      useRequestStore.getState().closeTabsForRequests(deletedRequestIds);
-    }
+    useRequestStore.getState().closeTabsForEntities(deletedEntityIds);
   },
 
   renameFolder: (id, name) => {
@@ -379,7 +397,7 @@ export const useCollectionStore = create<CollectionState>((set, get) => ({
       return { requests: newRequests, folders: newFolders, collections };
     });
     get().saveToStorage();
-    useRequestStore.getState().closeTabsForRequests([id]);
+    useRequestStore.getState().closeTabsForEntities([id]);
   },
 
   updateRequest: (id, patch) => {
@@ -439,6 +457,19 @@ export const useCollectionStore = create<CollectionState>((set, get) => ({
     });
     get().saveToStorage();
     return newRequest;
+  },
+
+  reorderCollection: (collectionId, targetIndex) => {
+    set((s) => {
+      const sourceIndex = s.collections.findIndex((c) => c.id === collectionId);
+      if (sourceIndex === -1) return s;
+      const collections = [...s.collections];
+      const [removed] = collections.splice(sourceIndex, 1);
+      const adjustedIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
+      collections.splice(adjustedIndex, 0, removed);
+      return { collections };
+    });
+    get().saveToStorage();
   },
 
   moveItem: (itemId, collectionId, targetParentFolderId, targetIndex) => {

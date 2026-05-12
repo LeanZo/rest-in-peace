@@ -174,3 +174,109 @@ button {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+.markdown-preview {
+  color: var(--color-text-primary);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.markdown-preview h1 {
+  font-size: 1.5em;
+  font-weight: 700;
+  margin: 1.25em 0 0.5em;
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-border-subtle);
+  padding-bottom: 0.3em;
+}
+.markdown-preview h2 {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin: 1em 0 0.4em;
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-border-subtle);
+  padding-bottom: 0.25em;
+}
+.markdown-preview h3 {
+  font-size: 1.1em;
+  font-weight: 600;
+  margin: 0.8em 0 0.3em;
+  color: var(--color-text-primary);
+}
+.markdown-preview h4, .markdown-preview h5, .markdown-preview h6 {
+  font-size: 1em;
+  font-weight: 600;
+  margin: 0.6em 0 0.2em;
+  color: var(--color-text-secondary);
+}
+.markdown-preview p {
+  margin: 0.5em 0;
+}
+.markdown-preview a {
+  color: var(--color-accent-purple-light);
+  text-decoration: none;
+}
+.markdown-preview a:hover {
+  text-decoration: underline;
+}
+.markdown-preview code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--color-surface-overlay);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  color: var(--color-accent-purple-light);
+}
+.markdown-preview pre {
+  background: var(--color-surface-base);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+  padding: 0.75em 1em;
+  overflow-x: auto;
+  margin: 0.75em 0;
+}
+.markdown-preview pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  color: var(--color-text-primary);
+  font-size: 0.85em;
+}
+.markdown-preview blockquote {
+  border-left: 3px solid var(--color-accent-purple-dim);
+  margin: 0.75em 0;
+  padding: 0.25em 1em;
+  color: var(--color-text-secondary);
+}
+.markdown-preview ul, .markdown-preview ol {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+}
+.markdown-preview li {
+  margin: 0.2em 0;
+}
+.markdown-preview hr {
+  border: none;
+  border-top: 1px solid var(--color-border-subtle);
+  margin: 1em 0;
+}
+.markdown-preview table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.75em 0;
+}
+.markdown-preview th, .markdown-preview td {
+  border: 1px solid var(--color-border-default);
+  padding: 0.4em 0.75em;
+  text-align: left;
+}
+.markdown-preview th {
+  background: var(--color-surface-overlay);
+  font-weight: 600;
+}
+.markdown-preview img {
+  max-width: 100%;
+  border-radius: 6px;
+}
+.markdown-preview *:first-child {
+  margin-top: 0;
+}

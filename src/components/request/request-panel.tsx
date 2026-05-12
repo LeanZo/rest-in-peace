@@ -6,6 +6,7 @@ import { KeyValueTable } from "@/primitives/key-value-table";
 import { CodeEditor } from "@/primitives/code-editor";
 import { CookiesEditor } from "./cookies-editor";
 import { ParamsEditor } from "./params-editor";
+import { DocsEditor } from "@/components/docs/docs-editor";
 import { UrlBar } from "./url-bar";
 import { syncParamsFromUrl } from "@/core/services/url-parser";
 import type { RequestConfig } from "@/core/models/request";
@@ -25,6 +26,7 @@ const REQUEST_TABS: TabItem[] = [
   { id: "body", label: "Body" },
   { id: "auth", label: "Auth" },
   { id: "cookies", label: "Cookies" },
+  { id: "docs", label: "Docs" },
 ];
 
 const BODY_TYPES = [
@@ -98,6 +100,14 @@ export function RequestPanel({ draft, isLoading, onUpdate, onSend }: RequestPane
 
         {activeTab === "cookies" && (
           <CookiesEditor collectionId={draft.collectionId} />
+        )}
+
+        {activeTab === "docs" && (
+          <DocsEditor
+            value={draft.docs ?? ""}
+            onChange={(docs) => onUpdate({ docs })}
+            placeholder="Write documentation for this request...\n\nSupports Markdown: headings, bold, code blocks, lists, links..."
+          />
         )}
       </div>
     </div>

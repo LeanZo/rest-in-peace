@@ -4,6 +4,7 @@ import type { AuthConfig } from "./request";
 export interface Collection extends BaseEntity {
   name: string;
   description?: string;
+  docs?: string;
   rootItemIds: EntityId[];
   activeEnvironmentId: EntityId | null;
   auth?: AuthConfig;
@@ -14,6 +15,7 @@ export interface Folder extends BaseEntity {
   collectionId: EntityId;
   parentFolderId: EntityId | null;
   name: string;
+  docs?: string;
   childItemIds: EntityId[];
 }
 

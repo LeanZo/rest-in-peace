@@ -4,6 +4,7 @@ import type { Environment } from "@/core/models/environment";
 import type { ExportedCollection, ExportedItem } from "@/core/models/export";
 import type { EntityId } from "@/core/models/primitives";
 import { generateId } from "@/lib/id";
+import { isTauri } from "@/core/adapters/platform";
 import { isPostmanCollection, importPostmanCollection, exportToPostman } from "./postman-converter";
 import { isInsomniaExport, importInsomniaExport, exportToInsomnia } from "./insomnia-converter";
 
@@ -70,6 +71,7 @@ export function exportCollection(
         items.push({
           type: "folder",
           name: folder.name,
+          docs: folder.docs,
           children: buildItems(folder.childItemIds),
         });
         continue;
@@ -80,6 +82,7 @@ export function exportCollection(
         items.push({
           type: "request",
           name: request.name,
+          docs: request.docs,
           method: request.method,
           url: request.url,
           params: request.params.map((p) => ({
@@ -107,6 +110,7 @@ export function exportCollection(
     collection: {
       name: collection.name,
       description: collection.description,
+      docs: collection.docs,
       auth: collection.auth,
       headers: collection.headers,
     },
@@ -144,6 +148,7 @@ export function importCollection(data: ExportedCollection): ImportResult {
           collectionId,
           parentFolderId,
           name: item.name,
+          docs: item.docs,
           childItemIds,
           createdAt: now,
           updatedAt: now,
@@ -157,6 +162,7 @@ export function importCollection(data: ExportedCollection): ImportResult {
         collectionId,
         parentFolderId,
         name: item.name,
+        docs: item.docs,
         method: item.method,
         url: item.url,
         params: item.params.map((p) => ({ id: generateId(), ...p })),
@@ -176,6 +182,7 @@ export function importCollection(data: ExportedCollection): ImportResult {
     id: collectionId,
     name: data.collection.name,
     description: data.collection.description,
+    docs: data.collection.docs,
     rootItemIds,
     activeEnvironmentId: null,
     auth: data.collection.auth,
@@ -203,14 +210,26 @@ export function importCollection(data: ExportedCollection): ImportResult {
   return { collection, folders: newFolders, requests: newRequests, environments };
 }
 
-export function downloadJson(data: unknown, filename: string) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
+export async function downloadJson(data: unknown, filename: string) {
+  if (isTauri()) {
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { writeTextFile } = await import("@tauri-apps/plugin-fs");
+
+    const filePath = await save({
+      defaultPath: filename,
+      filters: [{ name: "JSON", extensions: ["json"] }],
+    });
+    if (!filePath) return;
+    await writeTextFile(filePath, JSON.stringify(data, null, 2));
+  } else {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 }
 
 export function readJsonFile<T>(file: File): Promise<T> {

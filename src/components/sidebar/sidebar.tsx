@@ -209,11 +209,17 @@ function CollectionNode({ collectionId }: { collectionId: EntityId }) {
   const addFolder = useCollectionStore((s) => s.addFolder);
   const addReq = useCollectionStore((s) => s.addRequest);
   const openReq = useRequestStore((s) => s.openRequest);
+  const openCollection = useRequestStore((s) => s.openCollection);
+  const activeTabId = useRequestStore((s) => s.activeTabId);
+  const openTabs = useRequestStore((s) => s.openTabs);
   const deleteCollection = useCollectionStore((s) => s.deleteCollection);
   const updateCollection = useCollectionStore((s) => s.updateCollection);
   const moveItem = useCollectionStore((s) => s.moveItem);
   const allEnvironments = useEnvironmentStore((s) => s.environments);
   const isExpanded = expandedCollections.has(collectionId);
+  const isActive = openTabs.some(
+    (t) => t.type === "collection" && t.entityId === collectionId && t.id === activeTabId,
+  );
   const environments = useMemo(
     () => allEnvironments.filter((e) => e.collectionId === collectionId),
     [allEnvironments, collectionId],
@@ -222,6 +228,8 @@ function CollectionNode({ collectionId }: { collectionId: EntityId }) {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [forceEdit, setForceEdit] = useState(false);
+  const [collectionDropPos, setCollectionDropPos] = useState<"before" | "after" | null>(null);
+  const reorderCollection = useCollectionStore((s) => s.reorderCollection);
   const menu = useContextMenu();
 
   if (!collection) return null;
@@ -235,16 +243,53 @@ function CollectionNode({ collectionId }: { collectionId: EntityId }) {
     { label: "Delete", danger: true, onClick: () => setConfirmDelete(true) },
   ];
 
-  const handleExport = (format: ExportFormat) => {
+  const handleExport = async (format: ExportFormat) => {
     setShowExportMenu(false);
     const data = exportAs(format, collection, folders, requests, environments);
     const safeName = collection.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    downloadJson(data, `${safeName}.json`);
+    await downloadJson(data, `${safeName}.json`);
+  };
+
+  const handleCollectionDragStart = (e: DragEvent) => {
+    e.dataTransfer.setData("application/x-rip-collection", collectionId);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.types.includes("application/x-rip-collection")) {
+      e.stopPropagation();
+      const rect = e.currentTarget.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      setCollectionDropPos(e.clientY < midY ? "before" : "after");
+      setDropTarget(false);
+    } else {
+      setDropTarget(true);
+      setCollectionDropPos(null);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDropTarget(false);
+    setCollectionDropPos(null);
   };
 
   const handleDrop = (e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    const draggedCollectionId = e.dataTransfer.getData("application/x-rip-collection");
+    if (draggedCollectionId) {
+      const pos = collectionDropPos;
+      setCollectionDropPos(null);
+      if (draggedCollectionId === collectionId || !pos) return;
+      const collections = useCollectionStore.getState().collections;
+      const idx = collections.findIndex((c) => c.id === collectionId);
+      const targetIdx = pos === "before" ? idx : idx + 1;
+      reorderCollection(draggedCollectionId, targetIdx);
+      return;
+    }
+
     setDropTarget(false);
     const itemId = e.dataTransfer.getData("text/plain");
     if (!itemId) return;
@@ -253,15 +298,21 @@ function CollectionNode({ collectionId }: { collectionId: EntityId }) {
 
   return (
     <div>
+      {collectionDropPos === "before" && (
+        <div className="h-0.5 mx-2 bg-accent-purple rounded" />
+      )}
       <div
+        draggable
+        onDragStart={handleCollectionDragStart}
         className={cn(
           "flex items-center gap-1 px-2 py-1.5 mx-1 rounded hover:bg-surface-hover/50 cursor-pointer group",
+          isActive && "bg-accent-purple/10",
           dropTarget && "bg-accent-purple/10 ring-1 ring-accent-purple/30",
         )}
-        onClick={() => toggleCollection(collectionId)}
+        onClick={() => openCollection(collectionId, collection.docs ?? "")}
         onContextMenu={menu.onContextMenu}
-        onDragOver={(e) => { e.preventDefault(); setDropTarget(true); }}
-        onDragLeave={() => setDropTarget(false)}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
         <svg
@@ -272,9 +323,10 @@ function CollectionNode({ collectionId }: { collectionId: EntityId }) {
           stroke="currentColor"
           strokeWidth="2"
           className={cn(
-            "text-text-muted transition-transform duration-150 shrink-0",
+            "text-text-muted transition-transform duration-150 shrink-0 hover:text-text-primary",
             isExpanded && "rotate-90",
           )}
+          onClick={(e) => { e.stopPropagation(); toggleCollection(collectionId); }}
         >
           <polyline points="9 18 15 12 9 6" />
         </svg>
@@ -288,7 +340,7 @@ function CollectionNode({ collectionId }: { collectionId: EntityId }) {
           forceEdit={forceEdit}
           onEditEnd={() => setForceEdit(false)}
         />
-        <div className="hidden group-hover:flex items-center gap-0.5">
+        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity">
           <button
             onClick={(e) => { e.stopPropagation(); addFolder(collectionId, "New Folder"); }}
             className="text-text-muted hover:text-text-primary p-0.5 rounded hover:bg-surface-hover"
@@ -338,6 +390,9 @@ function CollectionNode({ collectionId }: { collectionId: EntityId }) {
           </button>
         </div>
       </div>
+      {collectionDropPos === "after" && (
+        <div className="h-0.5 mx-2 bg-accent-purple rounded" />
+      )}
 
       {menu.pos && <ContextMenu x={menu.pos.x} y={menu.pos.y} items={menuItems} onClose={menu.close} />}
       <ConfirmDialog
@@ -423,6 +478,9 @@ function FolderNode({
   const toggleFolder = useCollectionStore((s) => s.toggleFolder);
   const addReq = useCollectionStore((s) => s.addRequest);
   const openReq = useRequestStore((s) => s.openRequest);
+  const openFolderTab = useRequestStore((s) => s.openFolder);
+  const activeTabId = useRequestStore((s) => s.activeTabId);
+  const openTabs = useRequestStore((s) => s.openTabs);
   const addFolder = useCollectionStore((s) => s.addFolder);
   const renameFolder = useCollectionStore((s) => s.renameFolder);
   const deleteFolder = useCollectionStore((s) => s.deleteFolder);
@@ -431,6 +489,9 @@ function FolderNode({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [forceEdit, setForceEdit] = useState(false);
   const menu = useContextMenu();
+  const isFolderActive = openTabs.some(
+    (t) => t.type === "folder" && t.entityId === folderId && t.id === activeTabId,
+  );
 
   if (!folder) return null;
 
@@ -451,6 +512,7 @@ function FolderNode({
   };
 
   const handleDragOver = (e: DragEvent) => {
+    if (e.dataTransfer.types.includes("application/x-rip-collection")) return;
     e.preventDefault();
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
@@ -496,10 +558,11 @@ function FolderNode({
         onDrop={handleDrop}
         className={cn(
           "flex items-center gap-1 px-2 py-1 mx-1 rounded hover:bg-surface-hover/50 cursor-pointer group",
+          isFolderActive && "bg-accent-purple/10",
           dropPosition === "inside" && "bg-accent-purple/10 ring-1 ring-accent-purple/30",
         )}
         style={{ paddingLeft: `${depth * 8 + 8}px` }}
-        onClick={() => toggleFolder(folderId)}
+        onClick={() => openFolderTab(folderId, folder?.docs ?? "")}
         onContextMenu={menu.onContextMenu}
       >
         <svg
@@ -510,9 +573,10 @@ function FolderNode({
           stroke="currentColor"
           strokeWidth="2"
           className={cn(
-            "text-text-muted transition-transform duration-150 shrink-0",
+            "text-text-muted transition-transform duration-150 shrink-0 hover:text-text-primary",
             isExpanded && "rotate-90",
           )}
+          onClick={(e) => { e.stopPropagation(); toggleFolder(folderId); }}
         >
           <polyline points="9 18 15 12 9 6" />
         </svg>
@@ -526,7 +590,7 @@ function FolderNode({
           forceEdit={forceEdit}
           onEditEnd={() => setForceEdit(false)}
         />
-        <div className="hidden group-hover:flex items-center gap-0.5">
+        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity">
           <button
             onClick={(e) => { e.stopPropagation(); addFolder(collectionId, "New Folder", folderId); }}
             className="text-text-muted hover:text-text-primary p-0.5 rounded hover:bg-surface-hover"
@@ -609,7 +673,7 @@ function RequestNode({
   const activeTabId = useRequestStore((s) => s.activeTabId);
   const openTabs = useRequestStore((s) => s.openTabs);
   const isActive = openTabs.some(
-    (t) => t.requestId === request.id && t.id === activeTabId,
+    (t) => t.type === "request" && t.entityId === request.id && t.id === activeTabId,
   );
   const [dropPosition, setDropPosition] = useState<"before" | "after" | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -640,6 +704,7 @@ function RequestNode({
   };
 
   const handleDragOver = (e: DragEvent) => {
+    if (e.dataTransfer.types.includes("application/x-rip-collection")) return;
     e.preventDefault();
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();

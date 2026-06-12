@@ -4,6 +4,7 @@ import type { RequestConfig, ResolvedRequest } from "@/core/models/request";
 import type { EnvironmentVariable } from "@/core/models/environment";
 import type { CookieData } from "@/core/models/cookie";
 import { executeRequest } from "@/core/services/request-executor";
+import { HttpResponseError } from "@/core/adapters/http-client";
 
 type ExecutionStatus = "idle" | "sending" | "success" | "error" | "cancelled";
 
@@ -100,13 +101,21 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
         return;
       }
 
+      const partialResponse =
+        err instanceof HttpResponseError ? err.response : null;
+      const errorMessage = err instanceof Error
+        ? err.message
+        : typeof err === "string"
+          ? err
+          : "Request failed";
+
       set((s) => {
         const newExecs = new Map(s.executions);
         newExecs.set(tabId, {
-          status: "error",
-          response: null,
+          status: partialResponse ? "success" : "error",
+          response: partialResponse,
           resolvedRequest: null,
-          error: err instanceof Error ? err.message : "Request failed",
+          error: partialResponse ? null : errorMessage,
           startedAt: s.executions.get(tabId)?.startedAt ?? null,
           completedAt: Date.now(),
         });

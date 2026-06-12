@@ -1,5 +1,6 @@
 import type { RequestBody } from "@/core/models/request";
 import { CONTENT_TYPES } from "@/lib/constants";
+import { stripJsonComments } from "./json-comments";
 
 export interface SerializedBody {
   body: string | FormData | null;
@@ -13,7 +14,7 @@ export function serializeBody(requestBody: RequestBody): SerializedBody {
 
     case "json":
       return {
-        body: requestBody.content,
+        body: stripJsonComments(requestBody.content),
         contentType: CONTENT_TYPES.JSON,
       };
 
@@ -48,7 +49,7 @@ export function serializeBody(requestBody: RequestBody): SerializedBody {
       const payload: Record<string, unknown> = { query: requestBody.query };
       if (requestBody.variables) {
         try {
-          payload.variables = JSON.parse(requestBody.variables);
+          payload.variables = JSON.parse(stripJsonComments(requestBody.variables));
         } catch {
           payload.variables = {};
         }
@@ -65,7 +66,8 @@ export function serializeBody(requestBody: RequestBody): SerializedBody {
 }
 
 export function detectContentType(body: string): string {
-  const trimmed = body.trim();
+  const stripped = stripJsonComments(body);
+  const trimmed = stripped.trim();
   if (
     (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
     (trimmed.startsWith("[") && trimmed.endsWith("]"))
@@ -88,7 +90,7 @@ export function detectContentType(body: string): string {
 
 export function tryFormatJson(text: string): string {
   try {
-    return JSON.stringify(JSON.parse(text), null, 2);
+    return JSON.stringify(JSON.parse(stripJsonComments(text)), null, 2);
   } catch {
     return text;
   }

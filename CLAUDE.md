@@ -40,6 +40,21 @@ REST API development and testing tool.
 - HTTP: Desktop uses `@tauri-apps/plugin-http` (bypasses CORS, full header access); web uses browser `fetch`
 - Storage: Desktop uses `@tauri-apps/plugin-store` (JSON file `rest-in-peace-data.json`); web uses `localStorage` (prefix `rip:`)
 
+## CLI (`rip`)
+
+Agent-friendly CLI for managing REST API collections from the terminal. Reads/writes the same JSON data file as the desktop app.
+
+- `bun run cli:dev -- <command>` — Run CLI in dev mode
+- `bun run cli:build` — Compile standalone binary to `dist-cli/rip`
+- `bun run cli:build:win` — Compile Windows binary to `dist-cli/rip.exe`
+
+Commands: `list`, `get`, `create`, `update`, `delete`, `send`, `help`
+
+- All output is JSON to stdout, errors to stderr
+- Sensitive data masked by default (`*****`), reveal with `--show-secrets`
+- `--data-file <path>` overrides default data file location
+- CLI source in `cli/`, tests in `tests/unit/cli/`
+
 ## Conventions
 
 - Path alias: `@/` maps to `src/`

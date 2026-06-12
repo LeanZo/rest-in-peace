@@ -86,13 +86,10 @@ export function ResponsePanel({ execution }: ResponsePanelProps) {
             </svg>
           </div>
           <p className="text-sm text-text-secondary">
-            {execution.status === "cancelled" ? "Request cancelled" : "Request failed"}
+            {execution.status === "cancelled"
+              ? "Request cancelled"
+              : execution.error || "Request failed"}
           </p>
-          {execution.error && (
-            <p className="text-xs text-text-muted mt-1 max-w-[300px]">
-              {execution.error}
-            </p>
-          )}
         </div>
       </div>
     );

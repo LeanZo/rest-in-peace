@@ -8,6 +8,7 @@ import { javascript } from "@codemirror/lang-javascript";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { getBaseExtensions } from "@/lib/codemirror/extensions";
 import { variablePlugin } from "@/lib/codemirror/variable-decoration";
+import { jsonCommentPlugin } from "@/lib/codemirror/comment-decoration";
 
 export type CodeLanguage = "json" | "xml" | "html" | "javascript" | "markdown" | "text";
 
@@ -47,6 +48,7 @@ export function CodeEditor({
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  const syncingRef = useRef(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -63,7 +65,7 @@ export function CodeEditor({
     } else {
       extensions.push(
         EditorView.updateListener.of((update) => {
-          if (update.docChanged) {
+          if (update.docChanged && !syncingRef.current) {
             onChangeRef.current?.(update.state.doc.toString());
           }
         }),
@@ -72,6 +74,10 @@ export function CodeEditor({
 
     if (showVariableHighlight) {
       extensions.push(variablePlugin);
+    }
+
+    if (language === "json") {
+      extensions.push(jsonCommentPlugin);
     }
 
     if (placeholder) {
@@ -104,6 +110,7 @@ export function CodeEditor({
 
     const currentDoc = view.state.doc.toString();
     if (currentDoc !== value) {
+      syncingRef.current = true;
       view.dispatch({
         changes: {
           from: 0,
@@ -111,6 +118,7 @@ export function CodeEditor({
           insert: value,
         },
       });
+      syncingRef.current = false;
     }
   }, [value]);
 

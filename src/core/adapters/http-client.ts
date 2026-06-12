@@ -11,6 +11,55 @@ export interface HttpClientAdapter {
   ): Promise<ResponseData>;
 }
 
+export class HttpResponseError extends Error {
+  constructor(
+    message: string,
+    public response: ResponseData,
+  ) {
+    super(message);
+  }
+}
+
+async function readResponse(
+  response: Response,
+  startTime: number,
+  requestUrl: string,
+): Promise<ResponseData> {
+  const responseHeaders: Array<{ key: string; value: string }> = [];
+  response.headers.forEach((value, key) => {
+    responseHeaders.push({ key, value });
+  });
+
+  let bodyText = "";
+  try {
+    bodyText = await response.text();
+  } catch {
+    // Body stream may fail (e.g. truncated response) — keep empty body
+  }
+
+  const totalMs = performance.now() - startTime;
+  const contentType =
+    response.headers.get("content-type") || detectContentType(bodyText);
+
+  let cookies: ReturnType<typeof parseSetCookieHeaders> = [];
+  try {
+    cookies = parseSetCookieHeaders(responseHeaders, requestUrl);
+  } catch {
+    // Cookie parsing may fail — continue without cookies
+  }
+
+  return {
+    statusCode: response.status,
+    statusText: response.statusText,
+    headers: responseHeaders,
+    body: bodyText,
+    contentType,
+    bodySize: new Blob([bodyText]).size,
+    cookies,
+    timing: { totalMs },
+  };
+}
+
 class FetchHttpClient implements HttpClientAdapter {
   async send(
     request: ResolvedRequest,
@@ -32,28 +81,8 @@ class FetchHttpClient implements HttpClientAdapter {
     }
 
     const response = await fetch(request.url, init);
-    const bodyText = await response.text();
-    const totalMs = performance.now() - start;
 
-    const responseHeaders: Array<{ key: string; value: string }> = [];
-    response.headers.forEach((value, key) => {
-      responseHeaders.push({ key, value });
-    });
-
-    const contentType =
-      response.headers.get("content-type") || detectContentType(bodyText);
-    const cookies = parseSetCookieHeaders(responseHeaders, request.url);
-
-    return {
-      statusCode: response.status,
-      statusText: response.statusText,
-      headers: responseHeaders,
-      body: bodyText,
-      contentType,
-      bodySize: new Blob([bodyText]).size,
-      cookies,
-      timing: { totalMs },
-    };
+    return readResponse(response, start, request.url);
   }
 }
 
@@ -80,28 +109,8 @@ class TauriHttpClient implements HttpClientAdapter {
     }
 
     const response = await tauriFetch(request.url, init);
-    const bodyText = await response.text();
-    const totalMs = performance.now() - start;
 
-    const responseHeaders: Array<{ key: string; value: string }> = [];
-    response.headers.forEach((value, key) => {
-      responseHeaders.push({ key, value });
-    });
-
-    const contentType =
-      response.headers.get("content-type") || detectContentType(bodyText);
-    const cookies = parseSetCookieHeaders(responseHeaders, request.url);
-
-    return {
-      statusCode: response.status,
-      statusText: response.statusText,
-      headers: responseHeaders,
-      body: bodyText,
-      contentType,
-      bodySize: new Blob([bodyText]).size,
-      cookies,
-      timing: { totalMs },
-    };
+    return readResponse(response, start, request.url);
   }
 }
 

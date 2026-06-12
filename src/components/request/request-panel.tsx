@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { useUIStore } from "@/stores/ui-store";
 import { useCookieStore } from "@/stores/cookie-store";
 import { Tabs, type TabItem } from "@/primitives/tabs";
@@ -122,14 +122,24 @@ function BodyEditor({
   onUpdate: (patch: Partial<RequestConfig>) => void;
 }) {
   const bodyType = draft.body.type;
+  const bodyCache = useRef(new Map<string, RequestConfig["body"]>());
 
   const setBodyType = (type: string) => {
+    if (type === draft.body.type) return;
+    bodyCache.current.set(draft.body.type, draft.body);
+
+    const cached = bodyCache.current.get(type);
+    if (cached) {
+      onUpdate({ body: cached });
+      return;
+    }
+
     switch (type) {
       case "none":
         onUpdate({ body: { type: "none" } });
         break;
       case "json":
-        onUpdate({ body: { type: "json", content: draft.body.type === "json" ? draft.body.content : "" } });
+        onUpdate({ body: { type: "json", content: "" } });
         break;
       case "raw":
         onUpdate({ body: { type: "raw", content: "", contentType: "text/plain" } });
@@ -237,39 +247,43 @@ function BodyEditor({
 
         {bodyType === "graphql" && (
           <div className="flex flex-col gap-2 h-full">
-            <div className="flex-1">
-              <label className="text-xs text-text-muted mb-1 block">Query</label>
-              <CodeEditor
-                value={draft.body.type === "graphql" ? draft.body.query : ""}
-                onChange={(query) =>
-                  onUpdate({
-                    body: {
-                      type: "graphql",
-                      query,
-                      variables: draft.body.type === "graphql" ? draft.body.variables : "",
-                    },
-                  })
-                }
-                language="text"
-                showLineNumbers={false}
-              />
+            <div className="flex-1 min-h-0 flex flex-col">
+              <label className="text-xs text-text-muted mb-1 shrink-0">Query</label>
+              <div className="flex-1 min-h-0">
+                <CodeEditor
+                  value={draft.body.type === "graphql" ? draft.body.query : ""}
+                  onChange={(query) =>
+                    onUpdate({
+                      body: {
+                        type: "graphql",
+                        query,
+                        variables: draft.body.type === "graphql" ? draft.body.variables : "",
+                      },
+                    })
+                  }
+                  language="text"
+                  showLineNumbers={false}
+                />
+              </div>
             </div>
-            <div className="h-32">
-              <label className="text-xs text-text-muted mb-1 block">Variables (JSON)</label>
-              <CodeEditor
-                value={draft.body.type === "graphql" ? draft.body.variables : ""}
-                onChange={(variables) =>
-                  onUpdate({
-                    body: {
-                      type: "graphql",
-                      query: draft.body.type === "graphql" ? draft.body.query : "",
-                      variables,
-                    },
-                  })
-                }
-                language="json"
-                showLineNumbers={false}
-              />
+            <div className="h-32 shrink-0 flex flex-col">
+              <label className="text-xs text-text-muted mb-1 shrink-0">Variables (JSON)</label>
+              <div className="flex-1 min-h-0">
+                <CodeEditor
+                  value={draft.body.type === "graphql" ? draft.body.variables : ""}
+                  onChange={(variables) =>
+                    onUpdate({
+                      body: {
+                        type: "graphql",
+                        query: draft.body.type === "graphql" ? draft.body.query : "",
+                        variables,
+                      },
+                    })
+                  }
+                  language="json"
+                  showLineNumbers={false}
+                />
+              </div>
             </div>
           </div>
         )}

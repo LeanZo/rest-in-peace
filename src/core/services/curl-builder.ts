@@ -1,4 +1,5 @@
 import type { RequestConfig } from "@/core/models/request";
+import { stripJsonComments } from "./json-comments";
 
 export function buildCurl(request: RequestConfig): string {
   const parts: string[] = ["curl"];
@@ -26,7 +27,7 @@ export function buildCurl(request: RequestConfig): string {
   const body = request.body;
   if (body.type === "json") {
     parts.push(`-H ${shellQuote("Content-Type: application/json")}`);
-    parts.push(`-d ${shellQuote(body.content)}`);
+    parts.push(`-d ${shellQuote(stripJsonComments(body.content))}`);
   } else if (body.type === "raw") {
     if (body.contentType) {
       parts.push(`-H ${shellQuote(`Content-Type: ${body.contentType}`)}`);
@@ -43,7 +44,7 @@ export function buildCurl(request: RequestConfig): string {
     parts.push(`-H ${shellQuote("Content-Type: application/json")}`);
     const gqlBody = JSON.stringify({
       query: body.query,
-      variables: body.variables ? JSON.parse(body.variables) : undefined,
+      variables: body.variables ? JSON.parse(stripJsonComments(body.variables)) : undefined,
     });
     parts.push(`-d ${shellQuote(gqlBody)}`);
   }

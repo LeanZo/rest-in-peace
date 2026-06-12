@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "code-structure": {
+      "source": "LeanZo/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/code-structure/SKILL.md",
+      "computedHash": "57996a4a04cba7e60919f56bcbe1f78f11ca446969e8c8dfc506898f4a047515"
+    },
     "frontend-design": {
       "source": "anthropics/skills",
       "sourceType": "github",

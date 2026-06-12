@@ -140,9 +140,9 @@ export function UrlInput({
     (varName: string) => {
       const cursor = pendingCursor.current ?? getCursorOffset();
       const before = value.slice(0, cursor);
-      const match = before.match(/\{\{([a-zA-Z_][\w]*)$/);
+      const match = before.match(/\{\{([a-zA-Z_][\w]*)?$/);
       if (match) {
-        const start = cursor - match[1].length;
+        const start = cursor - (match[1]?.length ?? 0);
         const after = value.slice(cursor);
         pendingCursor.current = start + varName.length + 2;
         onChange(value.slice(0, start) + varName + "}}" + after);

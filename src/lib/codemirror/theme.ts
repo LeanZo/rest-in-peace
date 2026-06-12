@@ -71,6 +71,10 @@ export const ripEditorTheme = EditorView.theme(
         color: "var(--color-text-primary)",
       },
     },
+    ".cm-json-comment, .cm-json-comment span": {
+      color: "#64748b !important",
+      fontStyle: "italic",
+    },
     ".cm-panels": {
       backgroundColor: "var(--color-surface-raised)",
       borderTop: "1px solid var(--color-border-default)",

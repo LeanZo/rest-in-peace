@@ -1,5 +1,5 @@
 import { keymap, lineNumbers, highlightActiveLine, highlightSpecialChars } from "@codemirror/view";
-import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { bracketMatching, foldGutter, indentOnInput } from "@codemirror/language";
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
@@ -22,6 +22,8 @@ export function getBaseExtensions(options: {
     highlightSelectionMatches(),
     foldGutter(),
     keymap.of([
+      { key: "Mod-Enter", run: () => true },
+      indentWithTab,
       ...closeBracketsKeymap,
       ...defaultKeymap,
       ...historyKeymap,

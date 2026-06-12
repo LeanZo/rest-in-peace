@@ -30,6 +30,9 @@ jobs:
 
       - run: bun install
 
+      - name: Build CLI
+        run: bun build cli/main.ts --compile --outfile dist-cli/rip.exe --target bun-windows-x64
+
       - uses: dtolnay/rust-toolchain@stable
 
       - uses: tauri-apps/tauri-action@v0
@@ -37,6 +40,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          TAURI_CONFIG: '{"bundle":{"resources":["../dist-cli/rip.exe"]}}'
         with:
           tagName: v__VERSION__
           releaseName: "v__VERSION__"

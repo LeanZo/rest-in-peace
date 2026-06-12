@@ -11,7 +11,7 @@ import { handleSend } from "./commands/send";
 import { handleSkill } from "./commands/skill";
 import { printHelp, printCommandHelp } from "./help";
 
-const VERSION = "0.3.0";
+const VERSION = "0.3.1";
 
 export interface ParsedArgs {
   command: string;
@@ -90,9 +90,10 @@ export function parseArgs(argv: string[]): ParsedArgs {
 }
 
 function getUserArgs(): string[] {
-  const scriptArg = process.argv[1] ?? "";
-  const isScript = /\.(ts|js|mjs|cjs)$/.test(scriptArg);
-  return process.argv.slice(isScript ? 2 : 1);
+  // Bun sets argv to [runtime, entrypoint, ...userArgs] both for
+  // `bun run cli/main.ts` (entrypoint = the .ts file) and for the compiled
+  // binary (entrypoint = rip.exe), so user arguments always start at index 2.
+  return process.argv.slice(2);
 }
 
 async function routeList(parsed: ParsedArgs, data: DataLayer) {
@@ -269,7 +270,11 @@ async function main() {
 
 import { CliError } from "./output";
 
-if (process.argv[1]?.match(/cli[\\/]main\.(ts|js)$/)) {
+// This module is the entry point both when run via `bun run cli/main.ts` and as
+// the compiled standalone binary (rip.exe); Bun sets `import.meta.main` to true
+// in both cases. When the module is imported by tests it is false, so main()
+// does not auto-run there.
+if ((import.meta as { main?: boolean }).main) {
   main().catch((err) => {
     if (!(err instanceof CliError)) {
       process.stderr.write(

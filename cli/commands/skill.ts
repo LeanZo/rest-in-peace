@@ -1,34 +1,42 @@
 import { spawn } from "node:child_process";
-import { printResult, CliError } from "../output";
+import { CliError } from "../output";
 
 export const SKILL_REPOSITORY = "https://github.com/LeanZo/agent-skills";
 export const SKILL_NAME = "REST-in-peace-CLI";
 
 /**
- * Installs the REST in Peace CLI agent skill into the directory the command
- * was called from, by running:
+ * Installs the REST in Peace CLI agent skill into the directory the command was
+ * called from, by running:
  *
- *   npx skills add <SKILL_REPOSITORY> --skill <SKILL_NAME>
+ *   npx skills add <SKILL_REPOSITORY> --skill <SKILL_NAME> [...passthrough]
  *
- * The child process inherits the current working directory, so the skill lands
- * wherever `rip skill` was invoked. Its output is forwarded to stderr so this
- * command's stdout stays pure JSON, consistent with the rest of the CLI.
+ * The installer (`skills`) is interactive — it prompts you to choose which
+ * agents to install to — so we inherit the full terminal (stdin/stdout/stderr)
+ * and let it own the console. This makes `rip skill` behave exactly like running
+ * the npx command directly. Extra arguments are forwarded verbatim, so you can
+ * pass the installer's own flags, e.g. `rip skill --yes` or `rip skill -g`, to
+ * install without prompts.
+ *
+ * The child inherits the current working directory, so the skill lands wherever
+ * `rip skill` was invoked. rip exits with the installer's exit code.
  */
-export async function handleSkill(): Promise<void> {
+export async function handleSkill(passthrough: string[] = []): Promise<void> {
   const cwd = process.cwd();
-  const command = `npx skills add ${SKILL_REPOSITORY} --skill ${SKILL_NAME}`;
+  const extra = passthrough.length > 0 ? " " + passthrough.join(" ") : "";
+  const command = `npx skills add ${SKILL_REPOSITORY} --skill ${SKILL_NAME}${extra}`;
 
-  process.stderr.write(`Running: ${command}\n(in ${cwd})\n`);
+  process.stderr.write(`Running: ${command}\n(in ${cwd})\n\n`);
 
   return new Promise<void>((resolve, reject) => {
-    // shell:true resolves npx/npx.cmd across platforms. All arguments are
-    // hardcoded constants, so there is no command-injection surface.
-    // stdio: child stdout + stderr -> parent stderr (fd 2); stdin ignored so
-    // npx runs non-interactively and our stdout stays reserved for JSON.
+    // shell:true resolves npx/npx.cmd across platforms. The repo URL and skill
+    // name are hardcoded constants; passthrough comes from the user's own
+    // command line, so there is no additional injection surface beyond what they
+    // already control. stdio:"inherit" gives the installer the real terminal so
+    // its interactive prompts work.
     const child = spawn(command, {
       cwd,
       shell: true,
-      stdio: ["ignore", 2, 2],
+      stdio: "inherit",
     });
 
     child.on("error", (err) => {
@@ -41,20 +49,16 @@ export async function handleSkill(): Promise<void> {
 
     child.on("close", (code) => {
       if (code === 0) {
-        printResult({
-          installed: true,
-          skill: SKILL_NAME,
-          repository: SKILL_REPOSITORY,
-          location: cwd,
-          command,
-        });
         resolve();
       } else {
-        const message = `Skill install failed: "${command}" exited with code ${code}`;
-        process.stderr.write(
-          JSON.stringify({ error: message, code: "INSTALL_FAILED" }, null, 2) + "\n",
+        // The installer already reported the failure to the terminal; propagate
+        // a non-zero exit without adding noise.
+        reject(
+          new CliError(
+            `Skill install exited with code ${code}`,
+            "INSTALL_FAILED",
+          ),
         );
-        reject(new CliError(message, "INSTALL_FAILED"));
       }
     });
   });

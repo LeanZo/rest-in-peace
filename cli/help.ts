@@ -154,7 +154,7 @@ Examples:
   rip send abc-123 --environment env-456
   rip send abc-123 --no-history --show-secrets`;
 
-const HELP_SKILL = `Usage: rip skill
+const HELP_SKILL = `Usage: rip skill [installer flags]
 
 Installs the REST in Peace CLI agent skill into the current directory so an
 agent working in that project can discover and use the rip CLI.
@@ -162,13 +162,24 @@ agent working in that project can discover and use the rip CLI.
 Runs in the current working directory:
   npx skills add https://github.com/LeanZo/agent-skills --skill REST-in-peace-CLI
 
+The installer is interactive and will prompt you to pick which agents to
+install to (Claude Code is selected by default). Use the arrow keys / space to
+choose, then Enter to confirm.
+
+Any extra flags are passed straight through to the installer, so you can skip
+the prompts:
+  --yes, -y        Accept defaults, install without prompts
+  --global, -g     Install globally instead of into the current directory
+
 Notes:
   - The skill is installed wherever you run the command (the called location).
   - Requires Node.js / npx to be available on PATH.
-  - npx output is written to stderr; a JSON summary is written to stdout.
+  - rip exits with the installer's exit code.
 
 Examples:
-  rip skill`;
+  rip skill
+  rip skill --yes
+  rip skill -y -g`;
 
 const HELP_MAP: Record<string, string> = {
   list: HELP_LIST,

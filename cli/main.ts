@@ -11,7 +11,7 @@ import { handleSend } from "./commands/send";
 import { handleSkill } from "./commands/skill";
 import { printHelp, printCommandHelp } from "./help";
 
-const VERSION = "0.3.1";
+const VERSION = "0.3.2";
 
 export interface ParsedArgs {
   command: string;
@@ -244,7 +244,11 @@ async function main() {
       printCommandHelp("skill");
       process.exit(0);
     }
-    return handleSkill();
+    // Forward anything the user typed after `skill` to the installer verbatim
+    // (e.g. --yes, -y, --global, -g), so its own flags work through rip.
+    const skillIdx = rawArgs.indexOf("skill");
+    const passthrough = skillIdx >= 0 ? rawArgs.slice(skillIdx + 1) : [];
+    return handleSkill(passthrough);
   }
 
   const storage = new FileStorageAdapter(parsed.dataFile ?? undefined);

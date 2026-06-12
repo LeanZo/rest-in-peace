@@ -4,7 +4,7 @@ description: This skill defines how to use the CLI of the REST in Peace API clie
 license: MIT
 metadata:
   author: LeanZo
-  version: "1.0"
+  version: "1.2"
 ---
 
 # REST in Peace CLI — rip.exe
@@ -189,16 +189,22 @@ Installs the REST in Peace CLI agent skill into the directory the command is run
 rip skill           # Installs into the current working directory
 ```
 
+```bash
+rip skill --yes     # Skip the interactive prompts (accept defaults)
+rip skill -y -g     # Non-interactive, install globally
+```
+
 Under the hood it runs, in the called location:
 
 ```bash
 npx skills add https://github.com/LeanZo/agent-skills --skill REST-in-peace-CLI
 ```
 
-- Run it from the project root where you want the skill available.
-- Requires Node.js / `npx` on PATH.
-- `npx` progress is written to stderr; stdout gets a JSON summary `{ "data": { "installed": true, "skill": "REST-in-peace-CLI", ... } }`.
-- Error codes: `SPAWN_ERROR` (npx missing / failed to launch), `INSTALL_FAILED` (npx exited non-zero).
+- It is a transparent passthrough to the `skills` installer and **inherits the terminal**, so the installer's interactive prompt (which agents to install to) works normally.
+- Extra arguments are forwarded verbatim to the installer — notably `--yes`/`-y` (skip prompts) and `--global`/`-g` (install globally). Agents should pass `--yes` to avoid the interactive prompt.
+- Run it from the project root where you want the skill available (unless using `--global`).
+- Requires Node.js / `npx` on PATH; `rip` exits with the installer's exit code.
+- Error codes surfaced by `rip`: `SPAWN_ERROR` (npx missing / failed to launch), `INSTALL_FAILED` (installer exited non-zero).
 
 ### `rip help [command]`
 

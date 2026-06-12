@@ -8,16 +8,13 @@ vi.mock("node:child_process", () => ({
 }));
 
 import { handleSkill, SKILL_NAME, SKILL_REPOSITORY } from "../../../cli/commands/skill";
-import { startCapture, endCapture } from "../../../cli/output";
 
 beforeEach(() => {
-  startCapture();
   // Silence the human-readable progress/error lines written to stderr.
   vi.spyOn(process.stderr, "write").mockReturnValue(true);
 });
 
 afterEach(() => {
-  endCapture();
   vi.restoreAllMocks();
   spawnMock.mockReset();
 });
@@ -42,26 +39,35 @@ describe("skill command", () => {
     );
     expect(options.cwd).toBe(process.cwd());
     expect(options.shell).toBe(true);
-    // child stdout + stderr -> parent stderr; stdin ignored
-    expect(options.stdio).toEqual(["ignore", 2, 2]);
+    // Inherit the full terminal so the installer's interactive prompts work.
+    expect(options.stdio).toBe("inherit");
   });
 
-  it("returns a JSON success summary on exit code 0", async () => {
+  it("forwards passthrough flags to the installer", async () => {
+    const child = fakeChild();
+    spawnMock.mockReturnValue(child);
+
+    const promise = handleSkill(["--yes", "-g"]);
+    child.emit("close", 0);
+    await promise;
+
+    const [command] = spawnMock.mock.calls[0];
+    expect(command).toBe(
+      `npx skills add ${SKILL_REPOSITORY} --skill ${SKILL_NAME} --yes -g`,
+    );
+  });
+
+  it("resolves on exit code 0", async () => {
     const child = fakeChild();
     spawnMock.mockReturnValue(child);
 
     const promise = handleSkill();
     child.emit("close", 0);
-    await promise;
 
-    const output = JSON.parse(endCapture());
-    expect(output.data.installed).toBe(true);
-    expect(output.data.skill).toBe(SKILL_NAME);
-    expect(output.data.repository).toBe(SKILL_REPOSITORY);
-    expect(output.data.location).toBe(process.cwd());
+    await expect(promise).resolves.toBeUndefined();
   });
 
-  it("rejects when npx exits with a non-zero code", async () => {
+  it("rejects when the installer exits with a non-zero code", async () => {
     const child = fakeChild();
     spawnMock.mockReturnValue(child);
 

@@ -224,7 +224,9 @@ Resolves environment variables (`{{var}}`), builds auth headers, serializes body
 Install the REST in Peace CLI agent skill into the current directory, so an agent working in that project can discover and use the `rip` CLI.
 
 ```bash
-rip skill
+rip skill              # Interactive install into the current directory
+rip skill --yes        # Accept defaults, no prompts
+rip skill -y -g        # Non-interactive, install globally
 ```
 
 Runs the following in the directory the command was called from:
@@ -233,23 +235,15 @@ Runs the following in the directory the command was called from:
 npx skills add https://github.com/LeanZo/agent-skills --skill REST-in-peace-CLI
 ```
 
-- The skill is installed at the **called location** (current working directory).
+This is a transparent passthrough to the `skills` installer, which **inherits your terminal**:
+
+- The installer is **interactive** — it prompts you to pick which agents to install to (Claude Code is selected by default). Use arrow keys / space to choose, Enter to confirm.
+- Any extra arguments are forwarded verbatim to the installer. Its flags include `--yes`/`-y` (skip prompts) and `--global`/`-g` (install globally).
+- The skill is installed at the **called location** (current working directory) unless `--global` is passed.
 - Requires Node.js / `npx` on PATH.
-- `npx` output is forwarded to stderr; a JSON summary is written to stdout on success:
+- `rip` exits with the installer's exit code.
 
-```json
-{
-  "data": {
-    "installed": true,
-    "skill": "REST-in-peace-CLI",
-    "repository": "https://github.com/LeanZo/agent-skills",
-    "location": "C:\\path\\to\\project",
-    "command": "npx skills add https://github.com/LeanZo/agent-skills --skill REST-in-peace-CLI"
-  }
-}
-```
-
-Error codes: `SPAWN_ERROR` (npx not found / failed to launch), `INSTALL_FAILED` (npx exited non-zero).
+Error codes (surfaced by `rip` itself): `SPAWN_ERROR` (npx not found / failed to launch), `INSTALL_FAILED` (installer exited non-zero).
 
 ### `rip help [command]`
 

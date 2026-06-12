@@ -38,19 +38,39 @@ bun run cli:build:win      # Windows binary → dist-cli/rip.exe
 
 ### Production Build (App + CLI)
 
-To build the full desktop installer with the CLI bundled:
+To build the full desktop installer with the CLI bundled (Windows):
 
 ```bash
-# 1. Build the CLI binary
-bun run cli:build:win
-
-# 2. Build the desktop installer with CLI included
-bun run tauri build -- --config '{"bundle":{"resources":["../dist-cli/rip.exe"]}}'
+bun run tauri:build:win
 ```
 
-The installer is output to `src-tauri/target/release/bundle/nsis/`. It includes `rip.exe` alongside the main app and adds the installation directory to the user's PATH automatically.
+This runs three steps — build the CLI binary, generate the bundle config, then build the installer:
 
-Note: `bun run tauri dev` does not require the CLI binary — resources are only bundled during production builds.
+```bash
+bun run cli:build:win                         # 1. compile dist-cli/rip.exe
+bun scripts/gen-win-config.mjs --no-updater   # 2. write src-tauri/tauri.windows.conf.json
+bun run tauri build                           # 3. build the installer (auto-merges that config)
+```
+
+The installer is output to `src-tauri/target/release/bundle/nsis/`. It places `rip.exe` **directly in the install directory** (`%LOCALAPPDATA%\REST in Peace`), next to the main app, and adds that directory to the user's PATH automatically — so `rip` is available in any new terminal.
+
+#### How the CLI gets bundled
+
+`scripts/gen-win-config.mjs` writes `src-tauri/tauri.windows.conf.json` — a platform config Tauri auto-merges on Windows builds — declaring the CLI as a bundle resource:
+
+```json
+{ "bundle": { "resources": { "../dist-cli/rip.exe": "rip.exe" } } }
+```
+
+Three non-obvious things make this work (each one cost a wrong installer to learn):
+
+- **Map form, not array form.** `{"../dist-cli/rip.exe":"rip.exe"}` sets an explicit target, so the binary lands at `…\REST in Peace\rip.exe`. The array form `["../dist-cli/rip.exe"]` makes Tauri rewrite the leading `..` to `_up_`, landing it at `…\REST in Peace\_up_\dist-cli\rip.exe` — not on PATH.
+- **An auto-merged platform config — not `--config`, not `TAURI_CONFIG`.** The Tauri 2.11 CLI parses every `--config` value (inline JSON *and* `.json` files) as TOML, so a JSON override is rejected as a "dotted key expression"; and neither the CLI nor tauri-action reads a `TAURI_CONFIG` env var. A file named `tauri.windows.conf.json` is a recognized config name, so it is auto-merged and parsed as JSON — the one mechanism that actually reaches the bundler.
+- **Generated, not committed.** Tauri's build script copies `bundle.resources` on every `cargo build`, erroring if the source is missing. Generating the file only at installer-build time keeps `bun run tauri dev` decoupled from the CLI binary. It is gitignored.
+
+The `--no-updater` flag adds `"createUpdaterArtifacts": false` for local builds, because updater signing needs `TAURI_SIGNING_PRIVATE_KEY` (a CI secret) — without it the build fails with _"a public key has been found, but no private key."_ CI runs the generator without the flag and signs with the real key.
+
+Note: `bun run tauri dev` does not require the CLI binary — `src-tauri/tauri.windows.conf.json` only exists after an installer build.
 
 ### CI/CD
 
@@ -58,8 +78,8 @@ The GitHub Actions workflow (`.github/workflows/main.yml`) runs on tag pushes ma
 
 1. Installs dependencies (`bun install`)
 2. Builds the CLI binary (`bun build cli/main.ts --compile`)
-3. Builds the Tauri desktop installer with `TAURI_CONFIG` injecting the CLI as a bundled resource
-4. Creates a draft GitHub release with the installer attached
+3. Generates `src-tauri/tauri.windows.conf.json` (`bun scripts/gen-win-config.mjs`) so tauri-action bundles `rip.exe`
+4. Builds the installer and creates a draft GitHub release with it attached
 
 ## Quick Start
 
@@ -198,6 +218,38 @@ rip send <request-id> --show-secrets               # Show sensitive headers in r
 ```
 
 Resolves environment variables (`{{var}}`), builds auth headers, serializes body, and saves the result to history by default.
+
+### `rip skill`
+
+Install the REST in Peace CLI agent skill into the current directory, so an agent working in that project can discover and use the `rip` CLI.
+
+```bash
+rip skill
+```
+
+Runs the following in the directory the command was called from:
+
+```bash
+npx skills add https://github.com/LeanZo/agent-skills --skill REST-in-peace-CLI
+```
+
+- The skill is installed at the **called location** (current working directory).
+- Requires Node.js / `npx` on PATH.
+- `npx` output is forwarded to stderr; a JSON summary is written to stdout on success:
+
+```json
+{
+  "data": {
+    "installed": true,
+    "skill": "REST-in-peace-CLI",
+    "repository": "https://github.com/LeanZo/agent-skills",
+    "location": "C:\\path\\to\\project",
+    "command": "npx skills add https://github.com/LeanZo/agent-skills --skill REST-in-peace-CLI"
+  }
+}
+```
+
+Error codes: `SPAWN_ERROR` (npx not found / failed to launch), `INSTALL_FAILED` (npx exited non-zero).
 
 ### `rip help [command]`
 

@@ -8,9 +8,10 @@ import { handleEnvironment } from "./commands/environment";
 import { handleHistory } from "./commands/history";
 import { handleCookie } from "./commands/cookie";
 import { handleSend } from "./commands/send";
+import { handleSkill } from "./commands/skill";
 import { printHelp, printCommandHelp } from "./help";
 
-const VERSION = "0.1.0";
+const VERSION = "0.3.0";
 
 export interface ParsedArgs {
   command: string;
@@ -233,6 +234,16 @@ async function main() {
       parsed.command === "help" ? parsed.args[0] : parsed.command;
     printCommandHelp(target);
     process.exit(0);
+  }
+
+  // `skill` shells out to npx and needs no data file, so handle it before the
+  // storage/data layer is constructed.
+  if (parsed.command === "skill") {
+    if (hasFlag(parsed.flags, "help")) {
+      printCommandHelp("skill");
+      process.exit(0);
+    }
+    return handleSkill();
   }
 
   const storage = new FileStorageAdapter(parsed.dataFile ?? undefined);

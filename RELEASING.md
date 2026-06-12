@@ -98,6 +98,8 @@ Update the version in both files to the same value:
 
 - `package.json` — `"version"` field
 - `src-tauri/tauri.conf.json` — `"version"` field
+- `src-tauri/Cargo.toml` — `"version"` field
+- `cli/main.ts` — `"VERSION"` const
 
 Use [semantic versioning](https://semver.org/) (e.g., `0.2.0`, `1.0.0`, `1.1.0`).
 

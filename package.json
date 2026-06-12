@@ -1,6 +1,6 @@
 {
   "name": "rest-in-peace",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,7 +11,8 @@
     "tauri": "tauri",
     "cli:dev": "bun run cli/main.ts",
     "cli:build": "bun build cli/main.ts --compile --outfile dist-cli/rip",
-    "cli:build:win": "bun build cli/main.ts --compile --outfile dist-cli/rip.exe --target bun-windows-x64"
+    "cli:build:win": "bun build cli/main.ts --compile --outfile dist-cli/rip.exe --target bun-windows-x64",
+    "tauri:build:win": "bun run cli:build:win && bun scripts/gen-win-config.mjs --no-updater && bun run tauri build"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.0.0",

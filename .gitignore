@@ -1,11 +1,15 @@
 node_modules/
 dist/
+dist-cli/
 .vite/
 *.local
 
 # Tauri
 src-tauri/target/
 src-tauri/gen/
+# Generated at installer-build time by scripts/gen-win-config.mjs (see CLI.md).
+# Kept out of git so a plain `tauri dev` stays decoupled from the CLI binary.
+src-tauri/tauri.windows.conf.json
 
 # IDE
 .vscode/

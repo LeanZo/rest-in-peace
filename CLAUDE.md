@@ -48,7 +48,7 @@ Agent-friendly CLI for managing REST API collections from the terminal. Reads/wr
 - `bun run cli:build` — Compile standalone binary to `dist-cli/rip`
 - `bun run cli:build:win` — Compile Windows binary to `dist-cli/rip.exe`
 
-Commands: `list`, `get`, `create`, `update`, `delete`, `send`, `help`
+Commands: `list`, `get`, `create`, `update`, `delete`, `send`, `skill`, `help`
 
 - All output is JSON to stdout, errors to stderr
 - Sensitive data masked by default (`*****`), reveal with `--show-secrets`

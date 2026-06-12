@@ -9,6 +9,7 @@ Commands:
   update <id>          Update an entity (auto-detects type)
   delete <id>          Delete an entity (auto-detects type, cascades for collections/folders)
   send <request-id>    Execute a saved request
+  skill                Install the REST in Peace CLI agent skill into the current directory
   help [command]       Show help for a command
 
 Global Flags:
@@ -153,6 +154,22 @@ Examples:
   rip send abc-123 --environment env-456
   rip send abc-123 --no-history --show-secrets`;
 
+const HELP_SKILL = `Usage: rip skill
+
+Installs the REST in Peace CLI agent skill into the current directory so an
+agent working in that project can discover and use the rip CLI.
+
+Runs in the current working directory:
+  npx skills add https://github.com/LeanZo/agent-skills --skill REST-in-peace-CLI
+
+Notes:
+  - The skill is installed wherever you run the command (the called location).
+  - Requires Node.js / npx to be available on PATH.
+  - npx output is written to stderr; a JSON summary is written to stdout.
+
+Examples:
+  rip skill`;
+
 const HELP_MAP: Record<string, string> = {
   list: HELP_LIST,
   get: HELP_GET,
@@ -160,6 +177,7 @@ const HELP_MAP: Record<string, string> = {
   update: HELP_UPDATE,
   delete: HELP_DELETE,
   send: HELP_SEND,
+  skill: HELP_SKILL,
 };
 
 export function printHelp(): void {

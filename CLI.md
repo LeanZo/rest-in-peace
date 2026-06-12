@@ -274,7 +274,7 @@ The CLI reads/writes the same data file as the desktop app:
 
 | Platform | Path |
 |---|---|
-| Windows | `%LOCALAPPDATA%\br.dev.karma.restinpeace\rest-in-peace-data.json` |
+| Windows | `%APPDATA%\br.dev.karma.restinpeace\rest-in-peace-data.json` |
 | macOS | `~/Library/Application Support/br.dev.karma.restinpeace/rest-in-peace-data.json` |
 | Linux | `$XDG_DATA_HOME/br.dev.karma.restinpeace/rest-in-peace-data.json` |
 

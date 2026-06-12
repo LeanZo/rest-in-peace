@@ -65,7 +65,9 @@ export class FileStorageAdapter implements StorageAdapter {
 export function getDefaultDataPath(): string {
   const p = platform();
   if (p === "win32") {
-    const base = process.env.LOCALAPPDATA ?? join(homedir(), "AppData", "Local");
+    // Tauri's store plugin resolves against app_data_dir() (dirs::data_dir()),
+    // which is the Roaming AppData folder on Windows — not Local.
+    const base = process.env.APPDATA ?? join(homedir(), "AppData", "Roaming");
     return join(base, "br.dev.karma.restinpeace", "rest-in-peace-data.json");
   }
   if (p === "darwin") {
